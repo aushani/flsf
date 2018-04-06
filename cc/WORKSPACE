@@ -1,0 +1,38 @@
+new_local_repository(
+    name = "cuda",
+    build_file = "tools/cuda.BUILD",
+    path = "/usr/local/cuda/"
+)
+
+new_local_repository(
+    name = "openscenegraph",
+    build_file = "tools/openscenegraph.BUILD",
+    path = "../OpenSceneGraph/build/local_install/"
+)
+
+new_local_repository(
+    name = "qt4",
+    path = "/usr/include/qt4",
+    build_file = "tools/qt4.BUILD"
+)
+
+new_local_repository(
+    name = "glib2",
+    path = "/usr/",
+    build_file = "tools/glib2.BUILD"
+)
+
+new_http_archive(
+    name = "boost",
+    build_file = "tools/boost.BUILD",
+    sha256 = "5721818253e6a0989583192f96782c4a98eb6204965316df9f5ad75819225ca9",
+    type = "tar.bz2",
+    url = "https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2",
+)
+
+new_git_repository(
+    name = "eigen",
+    build_file = "tools/eigen.BUILD",
+    remote = "https://github.com/eigenteam/eigen-git-mirror.git",
+    commit = "1ae2849542a7892089f81f2ee460b510cdb0a16d",
+)
