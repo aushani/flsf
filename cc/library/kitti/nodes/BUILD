@@ -4,8 +4,7 @@ cc_library(
     hdrs = glob(['*.h']),
     visibility = ["//visibility:public"],
     deps = [
-            "//library/ray_tracing",
+            "//library/kitti",
             "//library/osg_nodes",
-            "@openscenegraph//:openscenegraph"
-           ],
+           ]
 )

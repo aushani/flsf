@@ -23,7 +23,6 @@ OccGridBuilder::OccGridBuilder(int max_observations, float resolution, float max
 }
 
 OccGridBuilder::~OccGridBuilder() {
-  device_data_->FreeDeviceMemory();
 }
 
 size_t OccGridBuilder::ProcessData(const std::vector<Eigen::Vector3f> &hits) {

@@ -1,5 +1,5 @@
 // Adapted from dascar
-#include "library/osg_nodes/occ_grid.h"
+#include "library/ray_tracing/nodes/occ_grid.h"
 
 #include <iostream>
 
@@ -8,8 +8,10 @@
 
 #include "library/osg_nodes/colorful_box.h"
 
+namespace osgn = library::osg_nodes;
+
 namespace library {
-namespace ray_tracing
+namespace ray_tracing {
 namespace nodes {
 
 OccGrid::OccGrid(const rt::OccGrid &og, double thresh_lo) : osg::Group() {
@@ -40,7 +42,7 @@ OccGrid::OccGrid(const rt::OccGrid &og, double thresh_lo) : osg::Group() {
     osg::Vec4 color(0.1, 0.9, 0.1, alpha);
     osg::Vec3 pos(x, y, z);
 
-    osg::ref_ptr<ColorfulBox> box = new ColorfulBox(color, pos, scale);
+    osg::ref_ptr<osgn::ColorfulBox> box = new osgn::ColorfulBox(color, pos, scale);
     addChild(box);
   }
 }

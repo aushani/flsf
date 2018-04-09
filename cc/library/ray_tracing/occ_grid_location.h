@@ -48,6 +48,12 @@ struct Location {
     return !((*this) == rhs);
   }
 
+  CUDA_CALLABLE void operator=(const Location &rhs) {
+    i = rhs.i;
+    j = rhs.j;
+    k = rhs.k;
+  }
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int /* file_version */){
     ar & i;

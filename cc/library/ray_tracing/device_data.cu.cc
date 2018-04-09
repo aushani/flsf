@@ -23,6 +23,7 @@ DeviceData::DeviceData(float resolution, float max_range, int max_observations) 
 
 void DeviceData::CopyData(const std::vector<Eigen::Vector3f> &h) {
   hits.SetPartialData(h);
+  num_observations = h.size();
 }
 
 __global__ void RayTracingKernel(DeviceData data) {
@@ -95,7 +96,7 @@ __global__ void RayTracingKernel(DeviceData data) {
 
   // walk down ray
   size_t mem_step_size = data.num_observations;
-  size_t mem_idx = hit_idx;
+  int mem_idx = hit_idx;
   bool valid = true;
   for (int step = 0; step < (data.steps_per_ray - 1); ++step) {
     Location loc(cur_loc[0], cur_loc[1], cur_loc[2]);
@@ -148,11 +149,10 @@ __global__ void RayTracingKernel(DeviceData data) {
   bool valid_end_point = (!data.oor_valid || !data.oor(loc));
 
   // Now write out key value pair
+  data.locations(mem_idx) = loc;
   if (valid_end_point) {
-    data.locations(mem_idx) = loc;
     data.log_odds_updates(mem_idx) = data.kLogOddsOccupied;
   } else {
-    data.locations(mem_idx) = loc;
     data.log_odds_updates(mem_idx) = data.kLogOddsUnknown;
   }
 }
@@ -165,7 +165,8 @@ void DeviceData::RunKernel() {
   //library::timer::Timer t;
 
   //t.Start();
-  int blocks = ceil(static_cast<float>(num_observations) / kThreadsPerBlock);
+  int blocks = std::ceil(static_cast<float>(num_observations) / kThreadsPerBlock);
+  //printf("Running kernel with %d blocks and %d threads\n", blocks, kThreadsPerBlock);
   RayTracingKernel<<<blocks, kThreadsPerBlock>>>(*this);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
@@ -177,36 +178,15 @@ size_t DeviceData::ReduceLogOdds() {
   size_t num_updates = num_observations * steps_per_ray;
 
   // First prune unnecessary updates
-  //t.Start();
-  //thrust::device_ptr<Location> dp_locations(locations);
-  //thrust::device_ptr<float> dp_updates(log_odds_updates);
-
   auto dp_locations_end = thrust::remove_if(locations.Begin(), locations.Begin() + num_updates, log_odds_updates.Begin(), NoUpdate());
   auto dp_updates_end = thrust::remove_if(log_odds_updates.Begin(), log_odds_updates.Begin() + num_updates, NoUpdate());
-
-  //auto dp_locations_end = thrust::remove_if(dp_locations, dp_locations + num_updates, dp_updates, NoUpdate());
-  //auto dp_updates_end = thrust::remove_if(dp_updates, dp_updates + num_updates, NoUpdate());
-  //printf("\tTook %5.3f to prune from %ld to %ld\n", t.GetMs(), num_updates, dp_locations_end - dp_locations);
-  //num_updates = dp_locations_end - dp_locations;
   num_updates = dp_locations_end - locations.Begin();
 
   // Now reduce updates to resulting log odds
-  //t.Start();
-  //thrust::sort_by_key(dp_locations, dp_locations + num_updates, dp_updates);
   thrust::sort_by_key(locations.Begin(), locations.Begin() + num_updates, log_odds_updates.Begin());
-  //printf("\tTook %5.3f to sort\n", t.GetMs());
-
-  //t.Start();
-  //thrust::device_ptr<Location> dp_locs_reduced(locations_reduced);
-  //thrust::device_ptr<float> dp_lo_reduced(log_odds_updates_reduced);
-
-  //thrust::pair<thrust::device_ptr<Location>, thrust::device_ptr<float> > new_ends = thrust::reduce_by_key(
-  //    dp_locations, dp_locations + num_updates, dp_updates, dp_locs_reduced, dp_lo_reduced);
-  //num_updates = new_ends.first - dp_locs_reduced;
   auto new_ends = thrust::reduce_by_key(locations.Begin(), locations.Begin() + num_updates, log_odds_updates.Begin(),
       locations_reduced.Begin(), log_odds_updates_reduced.Begin());
   num_updates = new_ends.first - locations_reduced.Begin();
-  //printf("\tTook %5.3f to reduce\n", t.GetMs());
 
   return num_updates;
 }

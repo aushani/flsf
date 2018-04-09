@@ -10,6 +10,7 @@ cc_library(
             "@boost//:boost_headers",
             "@boost//:boost_serialization",
             "//library/timer",
+            "//library/gpu_util",
             "//library/gpu_util:gpu_util_cuda",
            ],
 )

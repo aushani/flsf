@@ -10,7 +10,7 @@
 namespace library {
 namespace ray_tracing {
 
-// Forward declaration, defined in occ_grid_builder.cu.cc
+// Forward declaration
 typedef struct DeviceData DeviceData;
 
 // This class builds occupancy grids from given observations. Upon contruction,

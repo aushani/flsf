@@ -46,9 +46,7 @@ struct OutOfRange {
 struct DeviceData {
   DeviceData(float resolution, float max_range, int max_observations);
 
-  void FreeDeviceMemory();
-
-  void CopyData(const std::vector<Eigen::Vector3f> &hits);
+  void CopyData(const std::vector<Eigen::Vector3f> &h);
 
   void RunKernel();
   size_t ReduceLogOdds();

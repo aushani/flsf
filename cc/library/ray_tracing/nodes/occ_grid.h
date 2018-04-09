@@ -6,7 +6,6 @@
 #include <osg/MatrixTransform>
 
 #include "library/ray_tracing/occ_grid.h"
-#include "library/ray_tracing/feature_occ_grid.h"
 
 namespace rt = library::ray_tracing;
 
