@@ -1,42 +1,44 @@
 #include <iostream>
 #include <osg/ArgumentParser>
+#include <boost/filesystem.hpp>
 
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/tracklets.h"
 #include "library/kitti/nodes/point_cloud.h"
 #include "library/kitti/nodes/tracklets.h"
-//#include "library/osg_nodes/car.h"
+#include "library/osg_nodes/car.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
 #include "library/timer/timer.h"
 #include "library/viewer/viewer.h"
-//#include "library/gpu_util/util.h"
 
 #include "app/viewer/simple_handler.h"
 
 namespace kt = library::kitti;
 namespace rt = library::ray_tracing;
 namespace vw = library::viewer;
+namespace fs = boost::filesystem;
+namespace osgn = library::osg_nodes;
 namespace avw = app::viewer;
 
-kt::VelodyneScan LoadVelodyneScan(const std::string &kitti_log_dir,
+kt::VelodyneScan LoadVelodyneScan(const std::string &tsf_data_dir,
                                   const std::string &kitti_log_date,
                                   int log_num,
                                   int frame_num) {
   char fn[1000];
-  sprintf(fn, "%s/%s/%s_drive_%04d_sync/velodyne_points/data/%010d.bin",
-      kitti_log_dir.c_str(), kitti_log_date.c_str(), kitti_log_date.c_str(), log_num, frame_num);
+  sprintf(fn, "%s/kittidata/%s/%s_drive_%04d_sync/velodyne_points/data/%010d.bin",
+      tsf_data_dir.c_str(), kitti_log_date.c_str(), kitti_log_date.c_str(), log_num, frame_num);
 
   return kt::VelodyneScan(fn);
 }
 
-kt::Tracklets LoadTracklets(const std::string &kitti_log_dir,
+kt::Tracklets LoadTracklets(const std::string &tsf_data_dir,
                             const std::string &kitti_log_date,
                             int log_num) {
   // Load Tracklets
   char fn[1000];
-  sprintf(fn, "%s/%s/%s_drive_%04d_sync/tracklet_labels.xml",
-      kitti_log_dir.c_str(), kitti_log_date.c_str(), kitti_log_date.c_str(), log_num);
+  sprintf(fn, "%s/kittidata/%s/%s_drive_%04d_sync/tracklet_labels.xml",
+      tsf_data_dir.c_str(), kitti_log_date.c_str(), kitti_log_date.c_str(), log_num);
   kt::Tracklets tracklets;
   if (!tracklets.loadFromFile(fn)) {
     printf("Could not load tracklets from %s\n", fn);
@@ -59,7 +61,7 @@ int main(int argc, char** argv) {
   au->setCommandLineUsage( args.getApplicationName() + " [options]");
   au->setDescription(args.getApplicationName() + " viewer");
 
-  au->addCommandLineOption("--kitti-log-dir <dirname>", "KITTI data directory", "~/data/tsf_data/kittidata/");
+  au->addCommandLineOption("--tsf-data-dir <dirname>", "TSF data directory", "~/data/tsf_data/");
   au->addCommandLineOption("--kitti-log-date <dirname>", "KITTI date", "2011_09_26");
   au->addCommandLineOption("--log-num <num>", "KITTI log number", "18");
   au->addCommandLineOption("--frame-num <num>", "KITTI frame number", "0");
@@ -79,9 +81,9 @@ int main(int argc, char** argv) {
 
   // Read params
   std::string home_dir = getenv("HOME");
-  std::string kitti_log_dir = home_dir + "/data/tsf_data/kittidata/";
-  if (!args.read("--kitti-log-dir", kitti_log_dir)) {
-    printf("Using default KITTI log dir: %s\n", kitti_log_dir.c_str());
+  std::string tsf_data_dir = home_dir + "/data/tsf_data";
+  if (!args.read("--tsf-data-dir", tsf_data_dir)) {
+    printf("Using default tsf data dir: %s\n", tsf_data_dir.c_str());
   }
 
   std::string kitti_log_date = "2011_09_26";
@@ -99,16 +101,13 @@ int main(int argc, char** argv) {
     printf("Using default KITTI frame number: %d\n", frame_num);
   }
 
-  std::string model_dir = "/home/aushani/data/gen_data_50cm_blurred/training/";
-  if (!args.read("--models", model_dir)) {
-    printf("no model given, using default dir %s\n", model_dir.c_str());
-  }
+  fs::path car_path = fs::path(tsf_data_dir) / "osg_models/lexus/lexus_hs.obj";
 
   // Load velodyne scan
   printf("Loading vel\n");
-  kt::VelodyneScan scan = LoadVelodyneScan(kitti_log_dir, kitti_log_date, log_num, frame_num);
+  kt::VelodyneScan scan = LoadVelodyneScan(tsf_data_dir, kitti_log_date, log_num, frame_num);
   printf("Loading tracklets\n");
-  kt::Tracklets tracklets = LoadTracklets(kitti_log_dir, kitti_log_date, log_num);
+  kt::Tracklets tracklets = LoadTracklets(tsf_data_dir, kitti_log_date, log_num);
 
   printf("Have %ld points\n", scan.GetHits().size());
 
@@ -121,25 +120,22 @@ int main(int argc, char** argv) {
 
   printf("Occ grid has %ld voxels\n", og.GetLocations().size());
 
+  // Start viewer
+
   vw::Viewer v(&args);
 
   osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
   osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og);
   osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets, frame_num);
   osg::ref_ptr<avw::SimpleHandler> ph = new avw::SimpleHandler(tracklets, frame_num);
+  osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
 
   v.AddChild(pc);
   v.AddChild(ogn);
-  //v.AddChild(tn);
+  v.AddChild(tn);
+  v.AddChild(car_node);
+
   v.AddHandler(ph);
-
-  osg::ref_ptr<osg::MatrixTransform> xform_car = new osg::MatrixTransform();
-  osg::Matrixd D(osg::Quat(M_PI, osg::Vec3d(1, 0, 0)));
-  D.postMultTranslate(osg::Vec3d(-1, 0, -1.2));
-  xform_car->setMatrix(D);
-  //xform_car->addChild(new osgn::Car());
-
-  v.AddChild(xform_car);
 
   v.Start();
 

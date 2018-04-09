@@ -14,9 +14,9 @@ namespace ut = library::util;
 namespace library {
 namespace osg_nodes {
 
-Car::Car() : osg::MatrixTransform() {
+Car::Car(const fs::path& obj_file) : osg::MatrixTransform() {
   // read car file into osg::Node ptr
-  osg::ref_ptr<osg::Node> car = osgDB::readNodeFile( _k_car_file);
+  osg::ref_ptr<osg::Node> car = osgDB::readNodeFile(obj_file.string());
 
   // TODO: throw an exception
   if (car == nullptr) {
@@ -25,8 +25,9 @@ Car::Car() : osg::MatrixTransform() {
 
   // scale and rotate car to +x, z down
   // TODO: magic numbers, specific to lexus model
-  osg::Matrixd H(osg::Quat(ut::DegreesToRadians(180), osg::Vec3d(0, 0, 1)));
-  H.postMultRotate(osg::Quat(ut::DegreesToRadians(-90), osg::Vec3d(1, 0, 0)));
+  osg::Matrixd H;
+  H.postMultRotate(osg::Quat(ut::DegreesToRadians(180), osg::Vec3d(0, 0, 1)));
+  H.postMultRotate(osg::Quat(ut::DegreesToRadians(90), osg::Vec3d(1, 0, 0)));
   H.postMultScale(osg::Vec3d(_k_scale, _k_scale, _k_scale));
   H.postMultTranslate(_k_pos);
   setMatrix(H);

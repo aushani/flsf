@@ -7,8 +7,9 @@ cc_binary(
             "//library/ray_tracing",
             "//library/ray_tracing/nodes",
             "//library/timer",
-            #"//library/gpu_util",
             "//library/viewer",
+            "//library/osg_nodes",
             "@openscenegraph//:openscenegraph",
+            "@boost//:boost_filesystem",
            ],
 )
