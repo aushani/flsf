@@ -1,6 +1,8 @@
 // adapted from dascar
 #pragma once
 
+#include <memory>
+
 #include <QtGui/QProgressBar>
 #include <QtGui/QApplication>
 #include <QtGui/QSpinBox>
@@ -34,8 +36,8 @@ class Viewer {
   void Unlock();
 
  private:
-  QApplication *qapp_;
-  ViewerWindow *vwindow_;
+  std::unique_ptr<QApplication> qapp_;
+  std::unique_ptr<ViewerWindow> vwindow_;
 };
 
 } // namespace viewer

@@ -1,6 +1,7 @@
 // adapted from dascar
 #pragma once
 
+#include <memory>
 #include <mutex>
 
 // OSG
@@ -26,7 +27,7 @@ class ViewerWidget : public QWidget, public osgViewer::CompositeViewer {
 
   void paintEvent(QPaintEvent* event) { frame(); }
 
-  osg::ref_ptr<osgViewer::View> GetView() { return _view; };
+  osg::ref_ptr<osgViewer::View> GetView() { return view_; };
 
   void frame(double t=0) override;
 
@@ -35,15 +36,13 @@ class ViewerWidget : public QWidget, public osgViewer::CompositeViewer {
 
  private:
   // primary view
-  osg::ref_ptr<osgViewer::View> _view;
+  osg::ref_ptr<osgViewer::View> view_;
 
   std::mutex mutex_;
 
  protected:
-  ~ViewerWidget();
-
-  QTimer _timer;
-  QGridLayout* _grid;
+  QTimer timer_;
+  std::unique_ptr<QGridLayout> grid_;
 };
 
 } // namespace viewer

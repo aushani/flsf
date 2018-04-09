@@ -7,7 +7,7 @@ namespace library {
 namespace viewer {
 
 ViewerWidget::ViewerWidget(QWidget* parent, Qt::WindowFlags f, osgViewer::ViewerBase::ThreadingModel tm)
-    : QWidget(parent, f), _grid(new QGridLayout) {
+    : QWidget(parent, f), grid_(new QGridLayout()) {
   setThreadingModel(tm);
 
   // disable the default setting of viewer.done() by pressing Escape.
@@ -16,21 +16,19 @@ ViewerWidget::ViewerWidget(QWidget* parent, Qt::WindowFlags f, osgViewer::Viewer
   osg::ref_ptr<osgQt::GraphicsWindowQt> gw = create_graphics_window(0, 0, 1000, 1000);
   QWidget* widget1 = add_view_widget(gw);
 
-  _grid->addWidget(widget1, 0, 0);
-  _grid->setContentsMargins(0, 0, 0, 1);  // remove empty space
-  setLayout(_grid);
+  grid_->addWidget(widget1, 0, 0);
+  grid_->setContentsMargins(0, 0, 0, 1);  // remove empty space
+  setLayout(grid_.get());
 
-  connect(&_timer, SIGNAL(timeout()), this, SLOT(update()));
-  _timer.start(10);
+  connect(&timer_, SIGNAL(timeout()), this, SLOT(update()));
+  timer_.start(10);
 }
 
-ViewerWidget::~ViewerWidget() { delete _grid; }
-
 QWidget* ViewerWidget::add_view_widget(osg::ref_ptr<osgQt::GraphicsWindowQt> gw) {
-  _view = new osgViewer::View;
-  addView(_view);
+  view_ = new osgViewer::View();
+  addView(view_);
 
-  osg::ref_ptr<osg::Camera> camera = _view->getCamera();
+  osg::ref_ptr<osg::Camera> camera = view_->getCamera();
   camera->setGraphicsContext(gw);
 
   const osg::GraphicsContext::Traits* traits = gw->getTraits();
