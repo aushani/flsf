@@ -1,9 +1,13 @@
 #include <iostream>
 #include <osg/ArgumentParser>
 
+#include "library/viewer/viewer.h"
+
 #include "app/flow/app.h"
+#include "app/flow/handler.h"
 
 namespace fl = app::flow;
+namespace vw = library::viewer;
 
 int main(int argc, char** argv) {
   osg::ArgumentParser args(&argc, argv);
@@ -48,7 +52,19 @@ int main(int argc, char** argv) {
     printf("Using default KITTI log number: %d\n", log_num);
   }
 
-  fl::App app(fs::path(tsf_data_dir), kitti_log_date, log_num);
+  auto app = std::make_shared<fl::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
+  auto viewer = std::make_shared<vw::Viewer>(&args);
+
+  osg::ref_ptr<fl::Handler> handler = new fl::Handler();
+
+  viewer->AddHandler(handler);
+  app->SetViewer(viewer);
+  handler->SetApp(app);
+
+  app->ProccesFrame(0);
+
+  // Now we're ready to start
+  viewer->Start();
 
   return 0;
 }
