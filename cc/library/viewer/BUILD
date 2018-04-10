@@ -25,6 +25,7 @@ cc_library (
     name = "viewer",
     srcs = [
             "pick_handler.cc", "pick_handler.h",
+            "key_handler.cc", "key_handler.h",
             "terrain_trackpad_manipulator.cc", "terrain_trackpad_manipulator.h",
             "viewer.cc", "viewer.h",
             "viewer_widget.cc", "viewer_widget.h",

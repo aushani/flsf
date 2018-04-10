@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
   app->SetViewer(viewer);
   handler->SetApp(app);
 
+  // Process the first frame
   app->ProccesFrame(0);
 
   // Now we're ready to start

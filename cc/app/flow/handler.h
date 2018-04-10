@@ -7,7 +7,7 @@
 #include <osgGA/GUIEventHandler>
 #include <osgViewer/CompositeViewer>
 
-#include "library/viewer/pick_handler.h"
+#include "library/viewer/key_handler.h"
 
 #include "app/flow/app.h"
 
@@ -16,16 +16,16 @@ namespace flow {
 
 // from osgpick example
 // class to handle events with a pick
-class Handler : public library::viewer::PickHandler {
+class Handler : public library::viewer::KeyHandler {
  public:
   Handler();
 
-  void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+  bool KeyPress(const osgGA::GUIEventAdapter& ea);
 
   void SetApp(const std::shared_ptr<App> &app);
 
  private:
-  std::weak_ptr<App> app_;
+  std::shared_ptr<App> app_;
 };
 
 } // namespace flow

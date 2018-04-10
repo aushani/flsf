@@ -8,16 +8,14 @@
 namespace library {
 namespace viewer {
 
-// from osgpick example
-// class to handle events with a pick
-class PickHandler : public osgGA::GUIEventHandler {
+class KeyHandler : public osgGA::GUIEventHandler {
  public:
-  //PickHandler(State* state) : _state(state){};
-  PickHandler() {};
+  KeyHandler() {};
 
   bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa);
 
-  virtual void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+  virtual bool KeyPress(const osgGA::GUIEventAdapter &ea);
+
 };
 
 } // namespace viewer

@@ -4,18 +4,12 @@ namespace app {
 namespace flow {
 
 Handler::Handler() :
- library::viewer::PickHandler() {
+ library::viewer::KeyHandler() {
 }
 
-void Handler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
-  osgUtil::LineSegmentIntersector::Intersections intersections;
-
-  printf("Hello\n");
-
-  if (view->computeIntersections(ea, intersections)) {
-    for (auto hitr = intersections.begin(); hitr != intersections.end(); ++hitr) {
-    }
-  }
+bool Handler::KeyPress(const osgGA::GUIEventAdapter& ea) {
+  printf("Got key: %c\n", ea.getKey());
+  return true;
 }
 
 void Handler::SetApp(const std::shared_ptr<App> &app) {
