@@ -3,8 +3,29 @@
 namespace app {
 namespace flow {
 
-Handler::Handler() :
- library::viewer::KeyHandler() {
+Handler::Handler(const std::shared_ptr<App> &app) :
+ library::viewer::KeyHandler(),
+ app_(app),
+ command_queue_(std::make_shared<CommandQueue>()),
+ processing_thread_(&Handler::Run, *this) {
+}
+
+Handler::~Handler() {
+  running_ = false;
+  processing_thread_.join();
+}
+
+Handler::Handler(const Handler &h) :
+ library::viewer::KeyHandler(),
+ app_(h.app_),
+ command_queue_(h.command_queue_),
+ processing_thread_(&Handler::Run, this) {
+}
+
+Handler& Handler::operator=(const Handler &h) {
+  app_ = h.app_;
+  command_queue_ = h.command_queue_;
+  return *this;
 }
 
 bool Handler::KeyPress(const osgGA::GUIEventAdapter& ea) {
@@ -12,25 +33,25 @@ bool Handler::KeyPress(const osgGA::GUIEventAdapter& ea) {
 
   if (ctrl) {
     char c = ea.getKey() + 'A' - 1;
-    return KeyCommand(c);
+    return command_queue_->Push(c);
   }
 
   return false;
 }
 
-void Handler::SetApp(const std::shared_ptr<App> &app) {
-  app_ = app;
-}
+void Handler::Run() {
 
-bool Handler::KeyCommand(char c) {
-  switch(c) {
-    case 'N':
-      app_->ProcessNext();
-      return true;
+  while (running_) {
+    Command c = command_queue_->Pop(1000);
 
-    default:
-      printf("Invalid command: %c\n", c);
-      return false;
+    switch(c) {
+      case NEXT:
+        app_->ProcessNext();
+        break;
+
+      case NONE:
+        break;
+    }
   }
 }
 

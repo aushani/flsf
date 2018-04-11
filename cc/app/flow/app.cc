@@ -37,6 +37,8 @@ App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
   printf("Loading tracklet data...\n");
   fs::path tracklet_file = tsf_dir / "kittidata" / date / dir_name / "tracklet_labels.xml";
   tracklets_.loadFromFile(tracklet_file.string());
+
+  printf("Done loading data\n");
 }
 
 void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
@@ -56,10 +58,8 @@ void App::ProcessFrame(int frame_num) {
     osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets_, frame_num);
     //osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
 
-    printf("Remove all children\n");
     viewer_->RemoveAllChildren();
 
-    printf("Add children\n");
     viewer_->AddChild(pc);
     viewer_->AddChild(ogn);
     viewer_->AddChild(tn);
@@ -72,7 +72,6 @@ void App::ProcessFrame(int frame_num) {
 void App::ProcessNext() {
   scan_at_++;
   ProcessFrame(scan_at_);
-
 }
 
 } // flow

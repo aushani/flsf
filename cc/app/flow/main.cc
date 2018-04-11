@@ -55,16 +55,16 @@ int main(int argc, char** argv) {
   auto app = std::make_shared<fl::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
-  osg::ref_ptr<fl::Handler> handler = new fl::Handler();
+  osg::ref_ptr<fl::Handler> handler(new fl::Handler(app));
 
   viewer->AddHandler(handler);
   app->SetViewer(viewer);
-  handler->SetApp(app);
 
   // Process the first frame
   app->ProcessFrame(0);
 
   // Now we're ready to start
+  printf("Ready...\n");
   viewer->Start();
 
   return 0;

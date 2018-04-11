@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <queue>
+#include <thread>
 
 #include <osgGA/GUIActionAdapter>
 #include <osgGA/GUIEventAdapter>
@@ -10,24 +12,30 @@
 #include "library/viewer/key_handler.h"
 
 #include "app/flow/app.h"
+#include "app/flow/command_queue.h"
 
 namespace app {
 namespace flow {
 
-// from osgpick example
-// class to handle events with a pick
-class Handler : public library::viewer::KeyHandler {
+class Handler : public library::viewer::KeyHandler, boost::noncopyable {
  public:
-  Handler();
+  Handler(const std::shared_ptr<App> &app);
+  ~Handler();
 
-  bool KeyPress(const osgGA::GUIEventAdapter& ea);
+  Handler(const Handler &h);
+  Handler& operator=(const Handler &h);
 
-  void SetApp(const std::shared_ptr<App> &app);
+  bool KeyPress(const osgGA::GUIEventAdapter &ea);
 
  private:
   std::shared_ptr<App> app_;
+  std::shared_ptr<CommandQueue> command_queue_;
 
-  bool KeyCommand(char c);
+  std::thread processing_thread_;
+
+  bool running_ = true;
+
+  void Run();
 };
 
 } // namespace flow
