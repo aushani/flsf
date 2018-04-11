@@ -43,7 +43,7 @@ void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
   viewer_ = viewer;
 }
 
-void App::ProccesFrame(int frame_num) {
+void App::ProcessFrame(int frame_num) {
   const auto &scan = scans_[frame_num];
 
   auto og = og_builder_.GenerateOccGrid(scan.GetHits());
@@ -56,13 +56,23 @@ void App::ProccesFrame(int frame_num) {
     osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets_, frame_num);
     //osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
 
+    printf("Remove all children\n");
     viewer_->RemoveAllChildren();
 
+    printf("Add children\n");
     viewer_->AddChild(pc);
     viewer_->AddChild(ogn);
     viewer_->AddChild(tn);
     //viewer_->AddChild(car_node);
+
+    printf("Done\n");
   }
+}
+
+void App::ProcessNext() {
+  scan_at_++;
+  ProcessFrame(scan_at_);
+
 }
 
 } // flow

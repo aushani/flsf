@@ -21,7 +21,9 @@ class App {
 
   void SetViewer(const std::shared_ptr<vw::Viewer> &viewer);
 
-  void ProccesFrame(int frame_num);
+  void ProcessFrame(int frame_num);
+
+  void ProcessNext();
 
  private:
   static constexpr int kMaxVelodyneScanPoints = 150000;
@@ -30,6 +32,8 @@ class App {
 
   std::vector<kt::VelodyneScan> scans_;
   kt::Tracklets tracklets_;
+
+  size_t scan_at_ = 0;
 
   rt::OccGridBuilder og_builder_;
 

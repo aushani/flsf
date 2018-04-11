@@ -26,6 +26,8 @@ class Handler : public library::viewer::KeyHandler {
 
  private:
   std::shared_ptr<App> app_;
+
+  bool KeyCommand(char c);
 };
 
 } // namespace flow

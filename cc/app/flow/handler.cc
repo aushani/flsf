@@ -8,12 +8,30 @@ Handler::Handler() :
 }
 
 bool Handler::KeyPress(const osgGA::GUIEventAdapter& ea) {
-  printf("Got key: %c\n", ea.getKey());
-  return true;
+  bool ctrl = ea.getModKeyMask() && osgGA::GUIEventAdapter::ModKeyMask::MODKEY_CTRL;
+
+  if (ctrl) {
+    char c = ea.getKey() + 'A' - 1;
+    return KeyCommand(c);
+  }
+
+  return false;
 }
 
 void Handler::SetApp(const std::shared_ptr<App> &app) {
   app_ = app;
+}
+
+bool Handler::KeyCommand(char c) {
+  switch(c) {
+    case 'N':
+      app_->ProcessNext();
+      return true;
+
+    default:
+      printf("Invalid command: %c\n", c);
+      return false;
+  }
 }
 
 }  // namespace flow
