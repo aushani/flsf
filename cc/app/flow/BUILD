@@ -6,6 +6,7 @@ cc_binary(
             "//library/kitti/nodes",
             "//library/ray_tracing",
             "//library/ray_tracing/nodes",
+            "//library/tf",
             "//library/timer",
             "//library/viewer",
             "//library/osg_nodes",

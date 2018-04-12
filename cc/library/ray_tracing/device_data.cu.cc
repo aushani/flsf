@@ -22,7 +22,7 @@ DeviceData::DeviceData(float resolution, float max_range, int max_observations) 
 }
 
 void DeviceData::CopyData(const std::vector<Eigen::Vector3f> &h) {
-  hits.SetPartialData(h);
+  hits.CopyFrom(h, h.size());
   num_observations = h.size();
 }
 

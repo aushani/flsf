@@ -6,6 +6,7 @@
 #include "library/kitti/nodes/tracklets.h"
 #include "library/osg_nodes/car.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
+#include "library/timer/timer.h"
 
 namespace osgn = library::osg_nodes;
 
@@ -13,7 +14,8 @@ namespace app {
 namespace flow {
 
 App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
- og_builder_(kMaxVelodyneScanPoints, kResolution, kMaxRange) {
+ og_builder_(kMaxVelodyneScanPoints, kResolution, kMaxRange),
+ network_(tf::Network::LoadNetwork("/home/aushani/koopa_training/")) {
 
   // Load data
   std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
@@ -46,9 +48,21 @@ void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
 }
 
 void App::ProcessFrame(int frame_num) {
+  library::timer::Timer timer;
+
   const auto &scan = scans_[frame_num];
 
+  timer.Start();
   auto og = og_builder_.GenerateOccGrid(scan.GetHits());
+  printf("Took %5.3f ms to get occ grid\n", timer.GetMs());
+
+  timer.Start();
+  network_->SetInput(og);
+  printf("Took %5.3f ms to send occ grid to network\n", timer.GetMs());
+
+  timer.Start();
+  network_->Apply();
+  printf("Took %5.3f ms to run network\n", timer.GetMs());
 
   if (viewer_) {
     printf("Update viewer\n");
@@ -76,4 +90,3 @@ void App::ProcessNext() {
 
 } // flow
 } // app
-

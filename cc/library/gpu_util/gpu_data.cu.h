@@ -55,6 +55,11 @@ class GpuData {
     Release();
   }
 
+  void Clear() {
+    cudaError_t err = cudaMemset(d_data_, 0, sizeof(T) * elements_);
+    BOOST_ASSERT(err == cudaSuccess);
+  }
+
   const T* GetDevicePointer() const {
     return d_data_;
   }
@@ -63,19 +68,29 @@ class GpuData {
     return d_data_;
   }
 
-  __host__ void SetData(const std::vector<T> &data) {
-    BOOST_ASSERT(data.size() == elements_);
-    cudaMemcpy(d_data_, data.data(), sizeof(T)*elements_, cudaMemcpyHostToDevice);
+  __host__ void CopyFrom(const std::vector<T> &data, int el=-1) {
+    if (el < 0) {
+      BOOST_ASSERT(data.size() == elements_);
+      el = elements_;
+    }
 
-    cudaError_t err = cudaDeviceSynchronize();
+    BOOST_ASSERT(data.size() >= el);
+    BOOST_ASSERT(elements_ >= el);
+
+    cudaError_t err = cudaMemcpy(d_data_, data.data(), sizeof(T) * el, cudaMemcpyHostToDevice);
     BOOST_ASSERT(err == cudaSuccess);
   }
 
-  __host__ void SetPartialData(const std::vector<T> &data) {
-    BOOST_ASSERT(data.size() <= elements_);
-    cudaMemcpy(d_data_, data.data(), sizeof(T)*data.size(), cudaMemcpyHostToDevice);
+  __host__ void CopyFrom(const GpuData<N, T> &data, int el=-1) {
+    if (el < 0) {
+      BOOST_ASSERT(data.Size() == elements_);
+      el = elements_;
+    }
 
-    cudaError_t err = cudaDeviceSynchronize();
+    BOOST_ASSERT(data.Size() >= el);
+    BOOST_ASSERT(elements_ >= el);
+
+    cudaError_t err = cudaMemcpy(d_data_, data.GetDevicePointer(), sizeof(T) * el, cudaMemcpyDeviceToDevice);
     BOOST_ASSERT(err == cudaSuccess);
   }
 

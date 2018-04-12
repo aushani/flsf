@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include "library/tf/network.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/tracklets.h"
@@ -11,6 +12,7 @@ namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
 namespace kt = library::kitti;
 namespace vw = library::viewer;
+namespace tf = library::tf;
 
 namespace app {
 namespace flow {
@@ -35,7 +37,8 @@ class App {
 
   size_t scan_at_ = 0;
 
-  rt::OccGridBuilder og_builder_;
+  rt::OccGridBuilder              og_builder_;
+  std::shared_ptr<tf::Network>    network_;
 
   std::shared_ptr<vw::Viewer> viewer_;
 
