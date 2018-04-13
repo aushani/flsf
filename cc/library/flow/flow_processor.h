@@ -22,6 +22,8 @@ class FlowProcessor {
   void Initialize(const kt::VelodyneScan &scan);
   void Update(const kt::VelodyneScan &scan);
 
+  rt::OccGrid GetLastOccGrid() const;
+
  private:
   static constexpr int kMaxVelodyneScanPoints = 150000;
   static constexpr float kResolution = 0.3;
