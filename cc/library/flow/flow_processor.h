@@ -2,9 +2,12 @@
 
 #include <memory>
 
+#include <boost/filesystem.hpp>
+
 #include "library/ray_tracing/occ_grid.h"
 #include "library/kitti/velodyne_scan.h"
 
+namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
 namespace kt = library::kitti;
 
@@ -16,7 +19,7 @@ typedef struct DeviceData DeviceData;
 
 class FlowProcessor {
  public:
-  FlowProcessor();
+  FlowProcessor(const fs::path &data_path);
   ~FlowProcessor();
 
   void Initialize(const kt::VelodyneScan &scan);

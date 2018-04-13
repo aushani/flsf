@@ -14,7 +14,7 @@ namespace app {
 namespace flow {
 
 App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
- flow_processor_() {
+ flow_processor_("/home/aushani/koopa_training/") {
   // Load data
   std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
 

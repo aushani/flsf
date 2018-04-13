@@ -24,6 +24,7 @@ class Network {
   static Network LoadNetwork(const fs::path &path);
 
   void SetInput(const rt::OccGrid &og);
+  const gu::GpuData<3>& GetEncoding() const;
 
   void Apply();
 

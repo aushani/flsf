@@ -9,8 +9,10 @@ cc_library(
             "//library/kitti",
             "//library/ray_tracing",
             "//library/timer",
+            "//library/tf",
             "//tools:cuda",
             "@boost//:boost_headers",
+            "@boost//:boost_filesystem",
            ],
 )
 

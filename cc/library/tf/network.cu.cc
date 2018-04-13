@@ -83,6 +83,10 @@ void Network::SetInput(const rt::OccGrid &og) {
   BOOST_ASSERT(err == cudaSuccess);
 }
 
+const gu::GpuData<3>& Network::GetEncoding() const {
+  return res_clatent_;
+}
+
 void Network::Apply() {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
