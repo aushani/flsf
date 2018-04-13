@@ -1,53 +1,28 @@
-#include "library/tf/network.h"
+#include "library/tf/network.cu.h"
 
 #include <boost/assert.hpp>
-
-#include "library/ray_tracing/occ_grid.h"
-#include "library/gpu_util/gpu_data.cu.h"
-
-#include "library/tf/convolutional_layer.h"
-
-namespace gu = library::gpu_util;
 
 namespace library {
 namespace tf {
 
-struct NetworkData {
-  ConvolutionalLayer cl1;
-  ConvolutionalLayer cl2;
-  ConvolutionalLayer cl3;
-  ConvolutionalLayer clatent;
-
-  ConvolutionalLayer cl_classifier;
-
-  gu::GpuData<3> input;
-
-  gu::GpuData<3> res_cl1;
-  gu::GpuData<3> res_cl2;
-  gu::GpuData<3> res_cl3;
-  gu::GpuData<3> res_clatent;
-  gu::GpuData<3> res_classifier;
-
-  NetworkData(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const ConvolutionalLayer &clc) :
-   cl1(l1), cl2(l2), cl3(l3), clatent(latent),
-   cl_classifier(clc),
-   input(167, 167, 14),
-   res_cl1(167, 167, 200),
-   res_cl2(167, 167, 100),
-   res_cl3(167, 167, 50),
-   res_clatent(167, 167, 25),
-   res_classifier(167, 167, 8) {
-    input.SetCoalesceDim(0);
-    res_cl1.SetCoalesceDim(0);
-    res_cl2.SetCoalesceDim(0);
-    res_cl3.SetCoalesceDim(0);
-    res_clatent.SetCoalesceDim(0);
-    res_classifier.SetCoalesceDim(0);
-  }
-};
-
-Network::Network(NetworkData *data) :
- data_(data) {
+Network::Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const ConvolutionalLayer &clc) :
+ cl1_(l1),
+ cl2_(l2),
+ cl3_(l3),
+ clatent_(latent),
+ cl_classifier_(clc),
+ input_(167, 167, 14),
+ res_cl1_(167, 167, 200),
+ res_cl2_(167, 167, 100),
+ res_cl3_(167, 167, 50),
+ res_clatent_(167, 167, 25),
+ res_classifier_(167, 167, 8) {
+  input_.SetCoalesceDim(0);
+  res_cl1_.SetCoalesceDim(0);
+  res_cl2_.SetCoalesceDim(0);
+  res_cl3_.SetCoalesceDim(0);
+  res_clatent_.SetCoalesceDim(0);
+  res_classifier_.SetCoalesceDim(0);
 }
 
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
@@ -98,23 +73,23 @@ void Network::SetInput(const rt::OccGrid &og) {
   log_odds.CopyFrom(og.GetLogOdds());
 
   // Clear
-  data_->input.Clear();
+  input_.Clear();
 
   // Copy over
   int threads = 1024;
   int blocks = std::ceil(static_cast<float>(sz)/threads);
-  CopyOccGrid<<<blocks, threads>>>(locations, log_odds, data_->input);
+  CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 }
 
 void Network::Apply() {
-  data_->cl1.Apply(data_->input, &data_->res_cl1);
-  data_->cl2.Apply(data_->res_cl1, &data_->res_cl2);
-  data_->cl3.Apply(data_->res_cl2, &data_->res_cl3);
-  data_->clatent.Apply(data_->res_cl3, &data_->res_clatent);
+  cl1_.Apply(input_, &res_cl1_);
+  cl2_.Apply(res_cl1_, &res_cl2_);
+  cl3_.Apply(res_cl2_, &res_cl3_);
+  clatent_.Apply(res_cl3_, &res_clatent_);
 
-  data_->cl_classifier.Apply(data_->res_clatent, &data_->res_classifier);
+  cl_classifier_.Apply(res_clatent_, &res_classifier_);
 }
 
 // Load from file
@@ -131,7 +106,7 @@ std::vector<float> Network::LoadFile(const fs::path &path) {
   return data;
 }
 
-std::shared_ptr<Network> Network::LoadNetwork(const fs::path &path) {
+Network Network::LoadNetwork(const fs::path &path) {
   printf("Loading from path: %s\n", path.c_str());
 
   gu::GpuData<4> l1_weights(7, 7, 14, 200);
@@ -172,8 +147,7 @@ std::shared_ptr<Network> Network::LoadNetwork(const fs::path &path) {
 
   printf("Loaded\n");
 
-  NetworkData *data = new NetworkData(l1, l2, l3, latent, classifier);
-  return std::shared_ptr<Network>(new Network(data));
+  return Network(l1, l2, l3, latent, classifier);
 }
 
 } // namespace tf

@@ -42,7 +42,7 @@ bool Handler::KeyPress(const osgGA::GUIEventAdapter& ea) {
 void Handler::Run() {
 
   while (running_) {
-    Command c = command_queue_->Pop(1000);
+    Command c = command_queue_->Pop(10);
 
     switch(c) {
       case NEXT:

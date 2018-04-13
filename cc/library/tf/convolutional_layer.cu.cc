@@ -1,4 +1,4 @@
-#include "library/tf/convolutional_layer.h"
+#include "library/tf/convolutional_layer.cu.h"
 
 #include <boost/assert.hpp>
 

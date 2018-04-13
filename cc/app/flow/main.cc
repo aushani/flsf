@@ -6,7 +6,6 @@
 #include "app/flow/app.h"
 #include "app/flow/handler.h"
 
-namespace fl = app::flow;
 namespace vw = library::viewer;
 
 int main(int argc, char** argv) {
@@ -52,10 +51,10 @@ int main(int argc, char** argv) {
     printf("Using default KITTI log number: %d\n", log_num);
   }
 
-  auto app = std::make_shared<fl::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
+  auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
-  osg::ref_ptr<fl::Handler> handler(new fl::Handler(app));
+  osg::ref_ptr<app::flow::Handler> handler(new app::flow::Handler(app));
 
   viewer->AddHandler(handler);
   app->SetViewer(viewer);

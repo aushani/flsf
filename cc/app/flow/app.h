@@ -2,7 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "library/tf/network.h"
+#include "library/flow/flow_processor.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/tracklets.h"
@@ -12,7 +12,7 @@ namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
 namespace kt = library::kitti;
 namespace vw = library::viewer;
-namespace tf = library::tf;
+namespace fl = library::flow;
 
 namespace app {
 namespace flow {
@@ -28,20 +28,14 @@ class App {
   void ProcessNext();
 
  private:
-  static constexpr int kMaxVelodyneScanPoints = 150000;
-  static constexpr float kResolution = 0.3;
-  static constexpr float kMaxRange = 100.0;
-
   std::vector<kt::VelodyneScan> scans_;
   kt::Tracklets tracklets_;
 
   size_t scan_at_ = 0;
 
-  rt::OccGridBuilder              og_builder_;
-  std::shared_ptr<tf::Network>    network_;
+  fl::FlowProcessor flow_processor_;
 
   std::shared_ptr<vw::Viewer> viewer_;
-
 };
 
 } // flow
