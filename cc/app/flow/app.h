@@ -23,8 +23,6 @@ class App {
 
   void SetViewer(const std::shared_ptr<vw::Viewer> &viewer);
 
-  void ProcessFrame(int frame_num);
-
   void ProcessNext();
 
  private:
@@ -36,6 +34,8 @@ class App {
   fl::FlowProcessor flow_processor_;
 
   std::shared_ptr<vw::Viewer> viewer_;
+
+  void ProcessFrame(int frame_num);
 };
 
 } // flow

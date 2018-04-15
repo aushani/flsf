@@ -49,6 +49,8 @@ void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
 }
 
 void App::ProcessFrame(int frame_num) {
+  printf("Processing frame %d\n", frame_num);
+
   library::timer::Timer timer;
 
   const auto &scan = scans_[frame_num];

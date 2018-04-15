@@ -42,8 +42,6 @@ FlowProcessor::~FlowProcessor() {
 }
 
 void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
-  printf("TODO\n");
-
   auto og = data_->og_builder_.GenerateOccGrid(scan.GetHits());
   data_->last_og_ = og;
 
@@ -53,11 +51,10 @@ void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
 }
 
 void FlowProcessor::Update(const kt::VelodyneScan &scan) {
-  printf("TODO\n");
-
   // Get occ grid
   auto og = data_->og_builder_.GenerateOccGrid(scan.GetHits());
 
+  // Run encoding network
   data_->network_.SetInput(og);
   data_->network_.Apply();
 

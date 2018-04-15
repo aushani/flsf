@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   app->SetViewer(viewer);
 
   // Process the first frame
-  app->ProcessFrame(1);
+  app->ProcessNext();
 
   // Now we're ready to start
   printf("Ready...\n");

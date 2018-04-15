@@ -71,7 +71,7 @@ void Solver::ComputeFlow(const gu::GpuData<4> &dist_sq, gu::GpuData<3> *res) con
   FlowKernel<<<blocks, threads>>>(dist_sq, *res);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
-  printf("Took %5.3f to evaluate distance\n", timer.GetMs());
+  printf("Took %5.3f to evaluate flow\n", timer.GetMs());
 }
 
 } // namespace tf

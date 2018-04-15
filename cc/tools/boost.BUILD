@@ -44,6 +44,7 @@ cc_library(
   name = "boost_test",
   srcs = [
           "boost_1_66_0/libs/test/src/compiler_log_formatter.cpp",
+          "boost_1_66_0/libs/test/src/cpp_main.cpp",
           "boost_1_66_0/libs/test/src/debug.cpp",
           "boost_1_66_0/libs/test/src/decorator.cpp",
           "boost_1_66_0/libs/test/src/execution_monitor.cpp",
@@ -53,6 +54,8 @@ cc_library(
           "boost_1_66_0/libs/test/src/progress_monitor.cpp",
           "boost_1_66_0/libs/test/src/results_collector.cpp",
           "boost_1_66_0/libs/test/src/results_reporter.cpp",
+          "boost_1_66_0/libs/test/src/test_framework_init_observer.cpp",
+          "boost_1_66_0/libs/test/src/test_main.cpp",
           "boost_1_66_0/libs/test/src/test_tools.cpp",
           "boost_1_66_0/libs/test/src/test_tree.cpp",
           "boost_1_66_0/libs/test/src/unit_test_log.cpp",
