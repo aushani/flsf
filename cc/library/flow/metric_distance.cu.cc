@@ -66,8 +66,8 @@ void MetricDistance::ComputeDistance(const gu::GpuData<3> &d1,
   blocks.z = 1;
 
   dim3 threads;
-  threads.x = res->GetDim(0);
-  threads.y = res->GetDim(1);
+  threads.x = res->GetDim(2);
+  threads.y = res->GetDim(3);
   threads.z = 1;
 
   timer.Start();
