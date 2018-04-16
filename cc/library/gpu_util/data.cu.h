@@ -52,7 +52,7 @@ class Data {
     AddRef();
   }
 
-  template<DataLocation L2>
+  template<DataLocation L2, typename std::enable_if<L != L2, int>::type = 0>
   __host__ Data(const Data<N, T, L2> &d) {
     for (int i=0; i<N; i++) {
       dims_[i] = d.dims_[i];
@@ -60,14 +60,8 @@ class Data {
     elements_ = d.elements_;
     coalesce_dim_ = d.coalesce_dim_;
 
-    if (L == L2) {
-      data_ = d.data_;
-      ref_count_ = d.ref_count_;
-      AddRef();
-    } else {
-      Initialize();
-      CopyFrom(d);
-    }
+    Initialize();
+    CopyFrom(d);
   }
 
   __host__ ~Data() {
@@ -196,7 +190,32 @@ class Data {
     return elements_;
   }
 
-  template<DataLocation L2>
+  __host__ Data<N, T, L>& operator=(const Data<N, T, L> &d) {
+    // Check if this is the same
+    if (this == &d) {
+      return *this;
+    }
+
+    // Get rid of old data
+    Release();
+
+    // Get params
+    for (int i=0; i<N; i++) {
+      dims_[i] = d.dims_[i];
+    }
+    elements_ = d.elements_;
+
+    coalesce_dim_ = d.coalesce_dim_;
+
+    // Get new data
+    data_ = d.data_;
+    ref_count_ = d.ref_count_;
+    AddRef();
+
+    return *this;
+  }
+
+  template<DataLocation L2, typename std::enable_if<L != L2, int>::type = 0>
   __host__ Data<N, T, L>& operator=(const Data<N, T, L2> &d) {
     // Check if this is the same
     if (this == &d) {
@@ -215,18 +234,11 @@ class Data {
     coalesce_dim_ = d.coalesce_dim_;
 
     // Get new data
-    if (L == L2) {
-      data_ = d.data_;
-      ref_count_ = d.ref_count_;
-      AddRef();
-    } else {
-      Initialize();
-      CopyFrom(d);
-    }
+    Initialize();
+    CopyFrom(d);
 
     return *this;
   }
-
 
  private:
   int dims_[N] = {0,};
