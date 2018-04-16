@@ -24,7 +24,7 @@ class Network {
   static Network LoadNetwork(const fs::path &path);
 
   void SetInput(const rt::OccGrid &og);
-  const gu::GpuData<3>& GetEncoding() const;
+  const gu::GpuData<3, float>& GetEncoding() const;
 
   void Apply();
 
@@ -36,13 +36,13 @@ class Network {
 
   ConvolutionalLayer cl_classifier_;
 
-  gu::GpuData<3> input_;
+  gu::GpuData<3, float> input_;
 
-  gu::GpuData<3> res_cl1_;
-  gu::GpuData<3> res_cl2_;
-  gu::GpuData<3> res_cl3_;
-  gu::GpuData<3> res_clatent_;
-  gu::GpuData<3> res_classifier_;
+  gu::GpuData<3, float> res_cl1_;
+  gu::GpuData<3, float> res_cl2_;
+  gu::GpuData<3, float> res_cl3_;
+  gu::GpuData<3, float> res_clatent_;
+  gu::GpuData<3, float> res_classifier_;
 
   Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const
       ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const

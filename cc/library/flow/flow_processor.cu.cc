@@ -27,11 +27,11 @@ struct DeviceData {
   MetricDistance     distance_computer_;
   Solver             solver_;
 
-  boost::optional<rt::OccGrid>      last_og_;
-  boost::optional<gu::GpuData<3> >  last_encoding_;
+  boost::optional<rt::OccGrid>              last_og_;
+  boost::optional<gu::GpuData<3, float> >   last_encoding_;
 
-  gu::GpuData<4>                    distance_;
-  gu::GpuData<3>                    raw_flow_;
+  gu::GpuData<4, float>                     distance_;
+  gu::GpuData<3, int>                       raw_flow_;
 };
 
 FlowProcessor::FlowProcessor(const fs::path &data_path) :

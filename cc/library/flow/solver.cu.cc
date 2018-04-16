@@ -9,7 +9,7 @@ Solver::Solver() {
 
 }
 
-__global__ void FlowKernel(const gu::GpuData<4> dist_sq, gu::GpuData<3> res) {
+__global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, int> res) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
 
@@ -49,7 +49,7 @@ __global__ void FlowKernel(const gu::GpuData<4> dist_sq, gu::GpuData<3> res) {
   //best_scores(i, j) = best_d2;
 }
 
-void Solver::ComputeFlow(const gu::GpuData<4> &dist_sq, gu::GpuData<3> *res) const {
+void Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const {
   library::timer::Timer timer;
 
   BOOST_ASSERT(res->GetDim(0) == dist_sq.GetDim(0));

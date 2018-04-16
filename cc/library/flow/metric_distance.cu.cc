@@ -9,7 +9,7 @@ MetricDistance::MetricDistance() {
 
 }
 
-__global__ void DistanceKernel(const gu::GpuData<3> d1, const gu::GpuData<3> d2, gu::GpuData<4> res) {
+__global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData<3, float> d2, gu::GpuData<4, float> res) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
 
@@ -48,9 +48,9 @@ __global__ void DistanceKernel(const gu::GpuData<3> d1, const gu::GpuData<3> d2,
   res(i1, j1, tidx, tidy) = dist_sq;
 }
 
-void MetricDistance::ComputeDistance(const gu::GpuData<3> &d1,
-                                     const gu::GpuData<3> &d2,
-                                     gu::GpuData<4> *res) const {
+void MetricDistance::ComputeDistance(const gu::GpuData<3, float> &d1,
+                                     const gu::GpuData<3, float> &d2,
+                                     gu::GpuData<4, float> *res) const {
   library::timer::Timer timer;
 
   BOOST_ASSERT(d1.GetDim(0) == d2.GetDim(0));

@@ -26,7 +26,7 @@ Network::Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, con
 }
 
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
-    gu::GpuData<1, float> log_odds, gu::GpuData<3> dense) {
+    gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense) {
   // Figure out which hit this thread is processing
   const int bidx = blockIdx.x;
   const int tidx = threadIdx.x;
@@ -83,7 +83,7 @@ void Network::SetInput(const rt::OccGrid &og) {
   BOOST_ASSERT(err == cudaSuccess);
 }
 
-const gu::GpuData<3>& Network::GetEncoding() const {
+const gu::GpuData<3, float>& Network::GetEncoding() const {
   return res_clatent_;
 }
 
@@ -113,20 +113,20 @@ std::vector<float> Network::LoadFile(const fs::path &path) {
 Network Network::LoadNetwork(const fs::path &path) {
   printf("Loading from path: %s\n", path.c_str());
 
-  gu::GpuData<4> l1_weights(7, 7, 14, 200);
-  gu::GpuData<1> l1_biases(200);
+  gu::GpuData<4, float> l1_weights(7, 7, 14, 200);
+  gu::GpuData<1, float> l1_biases(200);
 
-  gu::GpuData<4> l2_weights(1, 1, 200, 100);
-  gu::GpuData<1> l2_biases(100);
+  gu::GpuData<4, float> l2_weights(1, 1, 200, 100);
+  gu::GpuData<1, float> l2_biases(100);
 
-  gu::GpuData<4> l3_weights(1, 1, 100, 50);
-  gu::GpuData<1> l3_biases(50);
+  gu::GpuData<4, float> l3_weights(1, 1, 100, 50);
+  gu::GpuData<1, float> l3_biases(50);
 
-  gu::GpuData<4> latent_weights(1, 1, 50, 25);
-  gu::GpuData<1> latent_biases(25);
+  gu::GpuData<4, float> latent_weights(1, 1, 50, 25);
+  gu::GpuData<1, float> latent_biases(25);
 
-  gu::GpuData<4> classifier_weights(1, 1, 25, 8);
-  gu::GpuData<1> classifier_biases(8);
+  gu::GpuData<4, float> classifier_weights(1, 1, 25, 8);
+  gu::GpuData<1, float> classifier_biases(8);
 
   l1_weights.CopyFrom(Network::LoadFile(path / "Encoder_l1_weights.dat"));
   l1_biases.CopyFrom(Network::LoadFile(path / "Encoder_l1_biases.dat"));

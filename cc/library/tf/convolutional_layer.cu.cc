@@ -7,14 +7,15 @@
 namespace library {
 namespace tf {
 
-ConvolutionalLayer::ConvolutionalLayer(const gu::GpuData<4> weights, const gu::GpuData<1> biases) :
+ConvolutionalLayer::ConvolutionalLayer(const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
  weights_(weights),
  biases_(biases) {
   BOOST_ASSERT(weights_.GetDim(3) == biases_.GetDim(0));
   BOOST_ASSERT(weights_.GetDim(3) <= kMaxOutputs);
 }
 
-__global__ void ApplyKernel(const gu::GpuData<4> weights, const gu::GpuData<1> biases, const gu::GpuData<3> input, gu::GpuData<3> output, bool relu) {
+__global__ void ApplyKernel(const gu::GpuData<4, float> weights, const gu::GpuData<1, float> biases,
+                            const gu::GpuData<3, float> input, gu::GpuData<3, float> output, bool relu) {
   // Figure out which hit this thread is processing
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
@@ -88,7 +89,7 @@ __global__ void ApplyKernel(const gu::GpuData<4> weights, const gu::GpuData<1> b
   }
 }
 
-void ConvolutionalLayer::Apply(const gu::GpuData<3> &input, gu::GpuData<3> *output) {
+void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output) {
   library::timer::Timer t;
 
   // Check dimensions

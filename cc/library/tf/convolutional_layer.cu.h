@@ -9,15 +9,15 @@ namespace tf {
 
 class ConvolutionalLayer {
  public:
-  ConvolutionalLayer(const gu::GpuData<4> weights, const gu::GpuData<1> biases);
+  ConvolutionalLayer(const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases);
 
-  void Apply(const gu::GpuData<3> &input, gu::GpuData<3> *output);
+  void Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output);
 
   static constexpr int kMaxOutputs = 200;
 
  private:
-  gu::GpuData<4> weights_;
-  gu::GpuData<1> biases_;
+  gu::GpuData<4, float> weights_;
+  gu::GpuData<1, float> biases_;
 };
 
 } // namespace tf

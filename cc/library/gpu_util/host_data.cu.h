@@ -6,7 +6,7 @@ namespace library {
 namespace gpu_util {
 
 template<int N, class T>
-using GpuData = Data<N, T, DataLocation::ON_DEVICE>;
+using HostData = Data<N, T, DataLocation::ON_HOST>;
 
 } // namespace gpu_util
 } // namespace library

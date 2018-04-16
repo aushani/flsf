@@ -11,7 +11,7 @@ class Solver {
  public:
   Solver();
 
-  void ComputeFlow(const gu::GpuData<4> &dist_sq, gu::GpuData<3> *res) const;
+  void ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const;
 };
 
 } // namespace tf

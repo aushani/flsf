@@ -52,8 +52,8 @@ OccGrid OccGridBuilder::GenerateOccGrid(const std::vector<Eigen::Vector3f> &hits
   //t.Start();
   std::vector<Location> location_vector(num_updates);
   std::vector<float> lo_vector(num_updates);
-  cudaMemcpy(location_vector.data(), device_data_->locations_reduced.GetDevicePointer(), sizeof(Location) * num_updates, cudaMemcpyDeviceToHost);
-  cudaMemcpy(lo_vector.data(), device_data_->log_odds_updates_reduced.GetDevicePointer(), sizeof(float) * num_updates, cudaMemcpyDeviceToHost);
+  cudaMemcpy(location_vector.data(), device_data_->locations_reduced.GetRawPointer(), sizeof(Location) * num_updates, cudaMemcpyDeviceToHost);
+  cudaMemcpy(lo_vector.data(), device_data_->log_odds_updates_reduced.GetRawPointer(), sizeof(float) * num_updates, cudaMemcpyDeviceToHost);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
   //printf("\tTook %5.3f to copy to host\n", t.GetMs());

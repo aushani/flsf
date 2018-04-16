@@ -11,9 +11,9 @@ class MetricDistance {
  public:
   MetricDistance();
 
-  void ComputeDistance(const gu::GpuData<3> &d1,
-                       const gu::GpuData<3> &d2,
-                       gu::GpuData<4> *res) const;
+  void ComputeDistance(const gu::GpuData<3, float> &d1,
+                       const gu::GpuData<3, float> &d2,
+                       gu::GpuData<4, float> *res) const;
 };
 
 } // namespace tf
