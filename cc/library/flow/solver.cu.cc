@@ -1,12 +1,12 @@
 #include "library/flow/solver.cu.h"
 
+#include "library/gpu_util/host_data.cu.h"
 #include "library/timer/timer.h"
 
 namespace library {
 namespace flow {
 
 Solver::Solver() {
-
 }
 
 __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, int> res) {
@@ -29,27 +29,32 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, i
   // Find best distance
   int best_di = 0;
   int best_dj = 0;
-  float best_d2 = 99999999.999;
+  float best_d2 = 0;
+  bool first = true;
 
   for (int di=0; di<dist_sq.GetDim(2); di++) {
     for (int dj=0; dj<dist_sq.GetDim(3); dj++) {
       float d2 = dist_sq(i, j, di, dj);
 
-      if (d2 < best_d2) {
+      if (d2 < 0) {
+        continue;
+      }
+
+      if (d2 < best_d2 || first) {
         best_di = di;
         best_dj = dj;
         best_d2 = d2;
+
+        first = false;
       }
     }
   }
 
   res(i, j, 0) = best_di - dist_sq.GetDim(2)/2;
   res(i, j, 1) = best_dj - dist_sq.GetDim(3)/2;
-
-  //best_scores(i, j) = best_d2;
 }
 
-void Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const {
+FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const {
   library::timer::Timer timer;
 
   BOOST_ASSERT(res->GetDim(0) == dist_sq.GetDim(0));
@@ -72,6 +77,24 @@ void Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, in
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
   printf("Took %5.3f to evaluate flow\n", timer.GetMs());
+
+  // Copy from device
+  gu::HostData<3, int> h_res = *res;
+  FlowImage fi(h_res.GetDim(0), h_res.GetDim(1));
+
+  for (int i=0; i<h_res.GetDim(0); i++) {
+    for (int j=0; j<h_res.GetDim(1); j++) {
+      int ii = fi.MinX() + i;
+      int jj = fi.MinY() + j;
+
+      int flow_x = h_res(i, j, 0);
+      int flow_y = h_res(i, j, 1);
+
+      fi.SetFlow(ii, jj, flow_x, flow_y);
+    }
+  }
+
+  return fi;
 }
 
 } // namespace tf

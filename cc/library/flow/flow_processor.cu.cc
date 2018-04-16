@@ -18,8 +18,9 @@ struct DeviceData {
    network_(tf::Network::LoadNetwork(data_path)),
    distance_computer_(),
    solver_(),
-   distance_(167, 167, 31, 31), // XXX magic numbers
-   raw_flow_(167, 167, 2) {
+   last_encoding_(167, 167, 25), // XXX magic numbers
+   distance_(167, 167, 31, 31),  // XXX magic numbers
+   raw_flow_(167, 167, 2) {      // XXX magic numbers
   };
 
   rt::OccGridBuilder og_builder_;
@@ -28,10 +29,11 @@ struct DeviceData {
   Solver             solver_;
 
   boost::optional<rt::OccGrid>              last_og_;
-  boost::optional<gu::GpuData<3, float> >   last_encoding_;
+  gu::GpuData<3, float>                     last_encoding_;
 
   gu::GpuData<4, float>                     distance_;
   gu::GpuData<3, int>                       raw_flow_;
+  boost::optional<FlowImage>                flow_image_;
 };
 
 FlowProcessor::FlowProcessor(const fs::path &data_path) :
@@ -47,7 +49,7 @@ void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
 
   data_->network_.SetInput(og);
   data_->network_.Apply();
-  data_->last_encoding_ = data_->network_.GetEncoding();
+  data_->last_encoding_.CopyFrom(data_->network_.GetEncoding());
 }
 
 void FlowProcessor::Update(const kt::VelodyneScan &scan) {
@@ -62,21 +64,26 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   auto encoding = data_->network_.GetEncoding();
 
   // Get distance
-  auto d1 = *data_->last_encoding_;
-  data_->distance_computer_.ComputeDistance(d1, encoding, &data_->distance_);
+  data_->distance_computer_.ComputeDistance(data_->last_encoding_, encoding, &data_->distance_);
 
   // Compute flow
-  data_->solver_.ComputeFlow(data_->distance_, &data_->raw_flow_);
+  auto fi = data_->solver_.ComputeFlow(data_->distance_, &data_->raw_flow_);
 
   // Update cached state
   data_->last_og_ = og;
-  data_->last_encoding_ = encoding;
+  data_->last_encoding_.CopyFrom(encoding);
+  data_->flow_image_ = fi;
 }
 
 rt::OccGrid FlowProcessor::GetLastOccGrid() const {
   BOOST_ASSERT(data_->last_og_);
 
   return *data_->last_og_;
+}
+
+FlowImage FlowProcessor::GetFlowImage() const {
+  BOOST_ASSERT(data_->flow_image_);
+  return *data_->flow_image_;
 }
 
 } // namespace tf

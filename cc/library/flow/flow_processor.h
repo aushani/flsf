@@ -7,6 +7,8 @@
 #include "library/ray_tracing/occ_grid.h"
 #include "library/kitti/velodyne_scan.h"
 
+#include "library/flow/flow_image.h"
+
 namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
 namespace kt = library::kitti;
@@ -26,6 +28,7 @@ class FlowProcessor {
   void Update(const kt::VelodyneScan &scan);
 
   rt::OccGrid GetLastOccGrid() const;
+  FlowImage GetFlowImage() const;
 
  private:
   static constexpr int kMaxVelodyneScanPoints = 150000;

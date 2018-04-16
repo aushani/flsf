@@ -7,6 +7,7 @@ cc_binary(
             "//library/ray_tracing",
             "//library/ray_tracing/nodes",
             "//library/flow",
+            "//library/flow/nodes",
             "//library/timer",
             "//library/viewer",
             "//library/osg_nodes",

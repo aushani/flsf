@@ -42,9 +42,9 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
 
   float p = 1.0 / (1.0 + expf(-lo));
 
-  int i = loc.i - dense.GetDim(0)/2;
-  int j = loc.j - dense.GetDim(1)/2;
-  int k = loc.k - dense.GetDim(2)/2;
+  int i = loc.i + dense.GetDim(0)/2;
+  int j = loc.j + dense.GetDim(1)/2;
+  int k = loc.k + dense.GetDim(2)/2;
 
   if (i < 0 || i >= dense.GetDim(0)) {
     return;
