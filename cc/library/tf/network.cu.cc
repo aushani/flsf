@@ -87,6 +87,10 @@ const gu::GpuData<3, float>& Network::GetEncoding() const {
   return res_clatent_;
 }
 
+const gu::GpuData<3, float>& Network::GetClassification() const {
+  return res_classifier_;
+}
+
 void Network::Apply() {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);

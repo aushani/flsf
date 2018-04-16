@@ -13,7 +13,9 @@ class Solver {
  public:
   Solver();
 
-  FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const;
+  FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq,
+                        const gu::GpuData<3, float> &classification,
+                        gu::GpuData<3, int> *res) const;
 };
 
 } // namespace tf

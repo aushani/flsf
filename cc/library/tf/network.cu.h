@@ -25,6 +25,7 @@ class Network {
 
   void SetInput(const rt::OccGrid &og);
   const gu::GpuData<3, float>& GetEncoding() const;
+  const gu::GpuData<3, float>& GetClassification() const;
 
   void Apply();
 

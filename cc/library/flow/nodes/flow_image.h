@@ -1,4 +1,3 @@
-// Adapted from dascar
 #pragma once
 
 #include <osg/Geometry>

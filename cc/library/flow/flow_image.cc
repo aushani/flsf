@@ -2,8 +2,6 @@
 
 #include <boost/assert.hpp>
 
-#include <iostream>
-
 namespace library {
 namespace flow {
 

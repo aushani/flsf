@@ -1,10 +1,23 @@
 cc_library(
+    name = "flow_util",
+    hdrs = [
+             "flow_image.h",
+             "classification_map.h",
+           ],
+    srcs = [
+             "flow_image.cc",
+             "classification_map.cc",
+           ]
+)
+
+cc_library(
     name = "flow_cuda",
     srcs = glob(['*.cu.cc']),
     hdrs = glob(["*.h"]),
     visibility = ["//visibility:public"],
     copts = ["-x",  "cuda", "-std=c++11"],
     deps = [
+            ":flow_util",
             "//library/gpu_util",
             "//library/kitti",
             "//library/ray_tracing",
@@ -23,5 +36,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
             ":flow_cuda",
+            ":flow_util",
            ],
 )

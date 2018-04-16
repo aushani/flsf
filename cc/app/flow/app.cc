@@ -5,6 +5,7 @@
 #include "library/kitti/nodes/point_cloud.h"
 #include "library/kitti/nodes/tracklets.h"
 #include "library/flow/nodes/flow_image.h"
+#include "library/flow/nodes/classification_map.h"
 #include "library/osg_nodes/car.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
 #include "library/timer/timer.h"
@@ -65,11 +66,13 @@ void App::ProcessFrame(int frame_num) {
 
     rt::OccGrid og = flow_processor_.GetLastOccGrid();
     fl::FlowImage fi = flow_processor_.GetFlowImage();
+    fl::ClassificationMap cm = flow_processor_.GetClassificationMap();
 
     osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
     osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets_, frame_num);
     osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og);
     osg::ref_ptr<fl::nodes::FlowImage> fin = new fl::nodes::FlowImage(fi, og.GetResolution());
+    osg::ref_ptr<fl::nodes::ClassificationMap> cmn = new fl::nodes::ClassificationMap(cm, og.GetResolution());
     //osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
 
     viewer_->RemoveAllChildren();
@@ -77,7 +80,8 @@ void App::ProcessFrame(int frame_num) {
     viewer_->AddChild(pc);
     viewer_->AddChild(tn);
     viewer_->AddChild(ogn);
-    viewer_->AddChild(fin);
+    //viewer_->AddChild(fin);
+    viewer_->AddChild(cmn);
     //viewer_->AddChild(car_node);
 
     printf("Done\n");

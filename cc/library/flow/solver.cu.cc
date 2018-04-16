@@ -9,7 +9,9 @@ namespace flow {
 Solver::Solver() {
 }
 
-__global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, int> res) {
+__global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
+                           const gu::GpuData<3, float> classification,
+                           gu::GpuData<3, int> res) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
 
@@ -25,6 +27,21 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, i
   if (i >= dist_sq.GetDim(0) || j >= dist_sq.GetDim(1)) {
     return;
   }
+
+  // Find p_background
+  float denom = 0.0;
+  for (int k=0; k<classification.GetDim(2); k++) {
+    denom += exp(classification(i, j, k));
+  }
+  float p_background = exp(classification(i, j, 3))/denom;
+
+  if (p_background > 0.5) {
+    res(i, j, 0) = 0;
+    res(i, j, 1) = 0;
+
+    return;
+  }
+
 
   // Find best distance
   int best_di = 0;
@@ -54,12 +71,17 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq, gu::GpuData<3, i
   res(i, j, 1) = best_dj - dist_sq.GetDim(3)/2;
 }
 
-FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<3, int> *res) const {
+FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
+                              const gu::GpuData<3, float> &classification,
+                              gu::GpuData<3, int> *res) const {
   library::timer::Timer timer;
 
   BOOST_ASSERT(res->GetDim(0) == dist_sq.GetDim(0));
   BOOST_ASSERT(res->GetDim(1) == dist_sq.GetDim(1));
   BOOST_ASSERT(res->GetDim(2) == 2);
+
+  BOOST_ASSERT(classification.GetDim(0) == dist_sq.GetDim(0));
+  BOOST_ASSERT(classification.GetDim(1) == dist_sq.GetDim(1));
 
   // Setup thread and block dims
   dim3 threads;
@@ -73,7 +95,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq, gu::GpuData<
   blocks.z = 1;
 
   timer.Start();
-  FlowKernel<<<blocks, threads>>>(dist_sq, *res);
+  FlowKernel<<<blocks, threads>>>(dist_sq, classification, *res);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
   printf("Took %5.3f to evaluate flow\n", timer.GetMs());

@@ -37,7 +37,7 @@ FlowImage::FlowImage(const fl::FlowImage &fi, float res) : osg::Group() {
       line->push_back(1);
       geometry->addPrimitiveSet(line);
 
-      osg::ref_ptr<osg::LineWidth> linewidth = new osg::LineWidth(4.0);
+      osg::ref_ptr<osg::LineWidth> linewidth = new osg::LineWidth(1.0);
       geometry->getOrCreateStateSet()->setAttribute(linewidth);
 
       // turn off lighting
