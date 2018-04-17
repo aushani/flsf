@@ -55,8 +55,17 @@ osg::ref_ptr<osg::Image> ClassificationMap::GetImage(const fl::ClassificationMap
       int jj = cm.MinY() + j;
 
       double p_car = cm.GetClassProbability(ii, jj, ObjectClass::CAR);
+      //double p_back = cm.GetClassProbability(ii, jj, ObjectClass::NO_OBJECT);
 
-      double r = p_car;
+      double lo = -std::log(1/p_car - 1);
+
+      double lmin = -3;
+      double lmax = 0;
+      double val = (lo - lmin) / (lmax - lmin);
+      if (val > 1) val = 1;
+      if (val < 0) val = 0;
+
+      double r = val;
       double g = 0;
       double b = 1-r;
 

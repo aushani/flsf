@@ -77,11 +77,11 @@ class Data {
     }
   }
 
-  const T* GetRawPointer() const {
+  __host__ __device__ const T* GetRawPointer() const {
     return data_;
   }
 
-  T* GetRawPointer() {
+  __host__ __device__ T* GetRawPointer() {
     return data_;
   }
 

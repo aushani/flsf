@@ -18,9 +18,21 @@ namespace flow {
 App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
  flow_processor_("/home/aushani/koopa_training/") {
   // Load data
+  LoadVelodyneData(tsf_dir, date, log_num);
+  LoadTrackletData(tsf_dir, date, log_num);
+  LoadPoses(tsf_dir, date, log_num);
+
+  // Initialize flow processor with first scan
+  flow_processor_.Initialize(scans_[0]);
+
+  printf("Done loading data\n");
+}
+
+void App::LoadVelodyneData(const fs::path &tsf_dir, const std::string &date, int log_num) {
+  printf("Loading velodyne data...\n");
+
   std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
 
-  printf("Loading velodyne data...\n");
   int frame_num = 0;
   while (true) {
     std::string fn = (boost::format("%010d.bin") % frame_num).str();
@@ -35,15 +47,25 @@ App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
 
     frame_num++;
   }
+}
 
+void App::LoadTrackletData(const fs::path &tsf_dir, const std::string &date, int log_num) {
   printf("Loading tracklet data...\n");
+
+  std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
+
   fs::path tracklet_file = tsf_dir / "kittidata" / date / dir_name / "tracklet_labels.xml";
   tracklets_.loadFromFile(tracklet_file.string());
+}
 
-  // Initialize flow processor with first scan
-  flow_processor_.Initialize(scans_[0]);
+void App::LoadPoses(const fs::path &tsf_dir, const std::string &date, int log_num) {
+  printf("Loading poses\n");
 
-  printf("Done loading data\n");
+  std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
+  fs::path path = tsf_dir / "kittidata" / date / dir_name;
+
+  raw_poses_ = kt::Pose::LoadRawPoses(path);
+  sm_poses_ = kt::Pose::LoadScanMatchedPoses(path);
 }
 
 void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
@@ -80,7 +102,7 @@ void App::ProcessFrame(int frame_num) {
     viewer_->AddChild(pc);
     viewer_->AddChild(tn);
     viewer_->AddChild(ogn);
-    //viewer_->AddChild(fin);
+    viewer_->AddChild(fin);
     viewer_->AddChild(cmn);
     //viewer_->AddChild(car_node);
 

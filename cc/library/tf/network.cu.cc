@@ -25,6 +25,20 @@ Network::Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, con
   res_classifier_.SetCoalesceDim(0);
 }
 
+__global__ void SetUnknown(gu::GpuData<3, float> dense) {
+  // Figure out which hit this thread is processing
+  const int bidx = blockIdx.x;
+  const int tidx = threadIdx.x;
+  const int threads = blockDim.x;
+
+  const int idx = tidx + bidx * threads;
+  if (idx >= dense.Size()) {
+    return;
+  }
+
+  dense.GetRawPointer()[idx] = 0.5;
+}
+
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
     gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense) {
   // Figure out which hit this thread is processing
@@ -40,6 +54,13 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
   const auto &loc = locations(idx);
   float lo = log_odds(idx);
 
+  // XXX TRAIN THIS OUT ///////////////
+  // Clip /////////////////////////////
+  const float l_max = 3.0;
+  const float l_min = -1.0;
+  if (lo > l_max) lo = l_max;
+  if (lo < l_min) lo = l_min;
+  /////////////////////////////////////
   float p = 1.0 / (1.0 + expf(-lo));
 
   int i = loc.i + dense.GetDim(0)/2;
@@ -72,14 +93,18 @@ void Network::SetInput(const rt::OccGrid &og) {
   gu::GpuData<1, float> log_odds(sz);
   log_odds.CopyFrom(og.GetLogOdds());
 
-  // Clear
-  input_.Clear();
+  // Clear (set unknown)
+  int threads = 1024;
+  int blocks = std::ceil(static_cast<float>(input_.Size()) / threads);
+  SetUnknown<<<threads, blocks>>>(input_);
+  cudaError_t err = cudaDeviceSynchronize();
+  BOOST_ASSERT(err == cudaSuccess);
 
   // Copy over
-  int threads = 1024;
-  int blocks = std::ceil(static_cast<float>(sz)/threads);
+  threads = 1024;
+  blocks = std::ceil(static_cast<float>(sz)/threads);
   CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
-  cudaError_t err = cudaDeviceSynchronize();
+  err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 }
 
