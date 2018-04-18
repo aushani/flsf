@@ -4,6 +4,7 @@
 
 #include <boost/format.hpp>
 
+#include "library/kitti/util.h"
 #include "library/kitti/nodes/point_cloud.h"
 #include "library/kitti/nodes/tracklets.h"
 #include "library/flow/nodes/flow_image.h"
