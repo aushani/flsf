@@ -1,5 +1,7 @@
 #include "app/flow/app.h"
 
+#include <map>
+
 #include <boost/format.hpp>
 
 #include "library/kitti/nodes/point_cloud.h"
@@ -29,24 +31,16 @@ App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
 }
 
 void App::LoadVelodyneData(const fs::path &tsf_dir, const std::string &date, int log_num) {
+  library::timer::Timer t;
+
   printf("Loading velodyne data...\n");
 
   std::string dir_name = (boost::format("%s_drive_%04d_sync") % date % log_num).str();
+  fs::path path = tsf_dir / "kittidata" / date / dir_name / "velodyne_points" / "data";
 
-  int frame_num = 0;
-  while (true) {
-    std::string fn = (boost::format("%010d.bin") % frame_num).str();
-    fs::path path = tsf_dir / "kittidata" / date / dir_name / "velodyne_points" / "data" / fn;
+  scans_ = kt::VelodyneScan::LoadDirectory(path);
 
-    if (!fs::exists(path)) {
-      break;
-    }
-
-    //printf("Load %s\n", path.string().c_str());
-    scans_.emplace_back(path.string());
-
-    frame_num++;
-  }
+  printf("Took %5.3f ms to load all velodyne files\n", t.GetMs());
 }
 
 void App::LoadTrackletData(const fs::path &tsf_dir, const std::string &date, int log_num) {
