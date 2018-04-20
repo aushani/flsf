@@ -3,3 +3,4 @@ bazel-cc
 bazel-out
 bazel-genfiles
 bazel-testlogs
+core
