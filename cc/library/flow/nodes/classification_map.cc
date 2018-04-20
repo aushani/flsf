@@ -24,6 +24,8 @@ ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm, float res)
 
   osg::ref_ptr<osg::Geode> geode = new osg::Geode();
 
+  double x0 = cm.MinX();
+  double y0 = cm.MinY();
   int width = cm.MaxX() - cm.MinX() + 1;
   int height = cm.MaxY() - cm.MinY() + 1;
 
