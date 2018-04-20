@@ -87,18 +87,18 @@ void App::ProcessFrame(int frame_num) {
 
     osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
     osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets_, frame_num);
-    osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og);
+    osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og, cm);
     osg::ref_ptr<fl::nodes::FlowImage> fin = new fl::nodes::FlowImage(fi, og.GetResolution());
     osg::ref_ptr<fl::nodes::ClassificationMap> cmn = new fl::nodes::ClassificationMap(cm, og.GetResolution());
     //osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
 
     viewer_->RemoveAllChildren();
 
-    viewer_->AddChild(pc);
+    //viewer_->AddChild(pc);
     viewer_->AddChild(tn);
     viewer_->AddChild(ogn);
     viewer_->AddChild(fin);
-    viewer_->AddChild(cmn);
+    //viewer_->AddChild(cmn);
     //viewer_->AddChild(car_node);
 
     printf("Done\n");

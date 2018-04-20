@@ -14,17 +14,17 @@ PointCloud::PointCloud(const VelodyneScan &scan) :
 
   for (const auto &hit : scan.GetHits()) {
     vertices_->push_back(osg::Vec3(hit.x(), hit.y(), hit.z()));
-    double z = hit.z();
-    double c = 0;
-    if (z < kColorMapZMin) {
-      c = 0.0;
-    } else if (z > kColorMapZMax) {
-      c = 1.0;
-    } else {
-      c = (z - kColorMapZMin)/(kColorMapZMax - kColorMapZMin);
-    }
-
-    colors_->push_back(osg::Vec4(1-c, 0, c, 0));
+    //double z = hit.z();
+    //double c = 0;
+    //if (z < kColorMapZMin) {
+    //  c = 0.0;
+    //} else if (z > kColorMapZMax) {
+    //  c = 1.0;
+    //} else {
+    //  c = (z - kColorMapZMin)/(kColorMapZMax - kColorMapZMin);
+    //}
+    //colors_->push_back(osg::Vec4(1-c, 0, c, 0));
+    colors_->push_back(osg::Vec4(0.2, 0.2, 0.2, 0));
   }
 
   setVertexArray(vertices_);
@@ -37,7 +37,7 @@ PointCloud::PointCloud(const VelodyneScan &scan) :
   //_geode->addDrawable(this);
   osg::ref_ptr<osg::StateSet> state = getOrCreateStateSet();
   state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-  state->setAttribute(new osg::Point(3), osg::StateAttribute::ON);
+  state->setAttribute(new osg::Point(1), osg::StateAttribute::ON);
 }
 
 } // nodes

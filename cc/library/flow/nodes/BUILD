@@ -5,6 +5,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
             "//library/flow",
+            "//library/kitti",
             "@openscenegraph//:openscenegraph"
            ],
 )

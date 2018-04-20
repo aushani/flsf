@@ -6,8 +6,10 @@
 #include <osg/MatrixTransform>
 
 #include "library/ray_tracing/occ_grid.h"
+#include "library/flow/classification_map.h"
 
 namespace rt = library::ray_tracing;
+namespace fl = library::flow;
 
 namespace library {
 namespace ray_tracing {
@@ -23,6 +25,7 @@ namespace nodes {
 class OccGrid : public osg::Group {
  public:
   OccGrid(const rt::OccGrid &og, double thresh_lo=0);
+  OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo=0);
 };
 
 } // nodes

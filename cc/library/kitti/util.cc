@@ -91,5 +91,43 @@ Eigen::Vector2f FindCorrespondingPosition(Tracklets *tracklets,
   return Eigen::Vector2f(x_2[0], x_2[1]);
 }
 
+ObjectClass GetObjectTypeAtLocation(Tracklets *tracklets, const Eigen::Vector2f &pos, int scan_at, float res) {
+  // This pose
+  pm::Pose3d::Vector6Type x_1;
+  x_1 << pos.x(), pos.y(), 0, 0, 0, 0;
+  pm::Pose3d x_1_p(x_1);
+
+  // Check if selected position is in any tracklets
+  Tracklets::tPose *tp;
+  Tracklets::tTracklet *tt;
+  for (int i=0; i<tracklets->numberOfTracklets(); i++) {
+    if (!tracklets->getPose(i, scan_at, tp)) {
+      continue;
+    }
+
+    tt = tracklets->getTracklet(i);
+
+    // Is this point within tracklet?
+    pm::Pose3d::Vector6Type t_1;
+    t_1 << tp->tx, tp->ty, tp->tz, tp->rx, tp->ry, tp->rz;
+    pm::Pose3d t_1_p(t_1);
+    pm::Pose3d x_t_p = t_1_p.TailToTail(x_1_p);
+    pm::Pose3d::Vector6Type x_t = x_t_p.xyzrph();
+
+    // Check if we're inside this track, otherwise this is not the track we
+    // are looking for...
+    if (fabs(x_t[0])<(tt->l/2 + res) && fabs(x_t[1])<(tt->w/2 + res)) {
+      //printf("Inside!\n");
+    } else {
+      continue;
+    }
+
+    // Now project to next frame
+    return StringToObjectClass(tt->objectType);
+  }
+
+  return ObjectClass::NO_OBJECT;
+}
+
 } // kitti
 } // library

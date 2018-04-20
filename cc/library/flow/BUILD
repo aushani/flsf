@@ -7,6 +7,9 @@ cc_library(
     srcs = [
              "flow_image.cc",
              "classification_map.cc",
+           ],
+    deps = [
+             "//library/kitti",
            ]
 )
 

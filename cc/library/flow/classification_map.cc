@@ -41,21 +41,21 @@ bool ClassificationMap::InRange(int i, int j) const {
   return valid_x && valid_y;
 }
 
-void ClassificationMap::SetClassScore(int i, int j, ObjectClass c, float score) {
+void ClassificationMap::SetClassScore(int i, int j, kt::ObjectClass c, float score) {
   BOOST_ASSERT(InRange(i, j));
 
   size_t idx = GetIdx(i, j);
   BOOST_ASSERT(idx < size_x_ * size_y_);
 
-  std::map<ObjectClass, float> &map = scores_[idx];
+  std::map<kt::ObjectClass, float> &map = scores_[idx];
   map[c] = score;
 }
 
-float ClassificationMap::GetClassProbability(int i, int j, ObjectClass c) const {
+float ClassificationMap::GetClassProbability(int i, int j, kt::ObjectClass c) const {
   BOOST_ASSERT(InRange(i, j));
 
   size_t idx = GetIdx(i, j);
-  const std::map<ObjectClass, float> &map = scores_[idx];
+  const std::map<kt::ObjectClass, float> &map = scores_[idx];
 
   auto class_score = map.find(c);
   if (class_score == map.end()) {
@@ -69,47 +69,6 @@ float ClassificationMap::GetClassProbability(int i, int j, ObjectClass c) const 
 
   return std::exp(class_score->second) / denom;
 }
-
-ObjectClass ClassificationMap::IntToObjectClass(int x) {
-  ObjectClass c = ObjectClass::NO_OBJECT;
-
-  switch(x) {
-    case 0:
-      c = ObjectClass::CAR;
-      break;
-
-    case 1:
-      c = ObjectClass::CYCLIST;
-      break;
-
-    case 2:
-      c = ObjectClass::MISC;
-      break;
-
-    case 3:
-      c = ObjectClass::NO_OBJECT;
-      break;
-
-    case 4:
-      c = ObjectClass::PEDESTRIAN;
-      break;
-
-    case 5:
-      c = ObjectClass::TRAM;
-      break;
-
-    case 6:
-      c = ObjectClass::TRUCK;
-      break;
-
-    case 7:
-      c = ObjectClass::VAN;
-      break;
-  }
-
-  return c;
-}
-
 
 } // flow
 } // library

@@ -6,6 +6,7 @@
 #include "library/tf/network.cu.h"
 #include "library/gpu_util/gpu_data.cu.h"
 #include "library/gpu_util/host_data.cu.h"
+#include "library/kitti/object_class.h"
 
 #include "library/flow/metric_distance.cu.h"
 #include "library/flow/solver.cu.h"
@@ -87,7 +88,7 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
       for (int k=0; k<hd.GetDim(2); k++) {
         int ii = data_->classification_map.MinX() + i;
         int jj = data_->classification_map.MinY() + j;
-        ObjectClass c = ClassificationMap::IntToObjectClass(k);
+        kt::ObjectClass c = kt::IntToObjectClass(k);
 
         data_->classification_map.SetClassScore(ii, jj, c, hd(i, j, k));
       }

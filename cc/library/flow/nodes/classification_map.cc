@@ -1,5 +1,9 @@
 #include "library/flow/nodes/classification_map.h"
 
+#include "library/kitti/object_class.h"
+
+namespace kt = library::kitti;
+
 namespace library {
 namespace flow {
 namespace nodes {
@@ -20,8 +24,6 @@ ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm, float res)
 
   osg::ref_ptr<osg::Geode> geode = new osg::Geode();
 
-  double x0 = cm.MinX();
-  double y0 = cm.MinY();
   int width = cm.MaxX() - cm.MinX() + 1;
   int height = cm.MaxY() - cm.MinY() + 1;
 
@@ -54,7 +56,7 @@ osg::ref_ptr<osg::Image> ClassificationMap::GetImage(const fl::ClassificationMap
       int ii = cm.MinX() + i;
       int jj = cm.MinY() + j;
 
-      double p_car = cm.GetClassProbability(ii, jj, ObjectClass::CAR);
+      double p_car = cm.GetClassProbability(ii, jj, kt::ObjectClass::CAR);
       //double p_back = cm.GetClassProbability(ii, jj, ObjectClass::NO_OBJECT);
 
       double lo = -std::log(1/p_car - 1);

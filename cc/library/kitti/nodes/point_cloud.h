@@ -16,8 +16,8 @@ class PointCloud : public osg::Geometry {
   PointCloud(const VelodyneScan &scan);
 
  private:
-  static constexpr double kColorMapZMin = -2.5;
-  static constexpr double kColorMapZMax = 2.5;
+  //static constexpr double kColorMapZMin = -2.5;
+  //static constexpr double kColorMapZMax = 2.5;
 
   osg::ref_ptr<osg::Vec3Array> vertices_;
   osg::ref_ptr<osg::Vec4Array> colors_;

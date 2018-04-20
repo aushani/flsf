@@ -6,6 +6,7 @@
 
 #include "library/kitti/tracklets.h"
 #include "library/kitti/pose.h"
+#include "library/kitti/object_class.h"
 
 namespace pm = thirdparty::perls_math_cc;
 
@@ -18,6 +19,8 @@ Eigen::Vector2f FindCorrespondingPosition(Tracklets *tracklets,
                                           int scan_des,
                                           const Pose &p1,
                                           const Pose &p2);
+
+ObjectClass GetObjectTypeAtLocation(Tracklets *tracklets, const Eigen::Vector2f &pos, int scan_at, float res=0.0);
 
 } // kitti
 } // library
