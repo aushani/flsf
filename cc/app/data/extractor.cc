@@ -45,8 +45,13 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
   kt::Pose p1 = sm_poses_[idx1];
   kt::Pose p2 = sm_poses_[idx2];
 
-  double p = 1.0 / (ps::kSearchSize * ps::kSearchSize - 1);
-  std::bernoulli_distribution rand(p);
+  // How often do we record a match query
+  double p_match = 1.0 / (ps::kSearchSize * ps::kSearchSize - 1);
+  std::bernoulli_distribution rand_match(p_match);
+
+  // How often do we try out a spot in the occ grid if it's background
+  double p_bg = 0.02;
+  std::bernoulli_distribution rand_bg(p_bg);
 
   // Iterate through occ grid
   for (int i1=ps::kOccGridMinXY; i1<=ps::kOccGridMaxXY; i1++) {
@@ -61,13 +66,19 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
         continue;
       }
 
+      // Get object type
+      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
+
+      // If it's background, we should potentially skip it because we get a lot
+      // of these
+      if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
+        continue;
+      }
+
       // Project position from og1 to og2
       Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, idx1, idx2, p1, p2);
       int i2_match = std::round(pos2.x() / ps::kResolution);
       int j2_match = std::round(pos2.y() / ps::kResolution);
-
-      // Get object type
-      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
 
       // Look through search spacej;w
       for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
@@ -79,7 +90,7 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
 
           // Need to do some kind of random filtering, otherwise way too much
           // data to store
-          if (!match && !rand(random_generator_)) {
+          if (!match && !rand_match(random_generator_)) {
             continue;
           }
 
