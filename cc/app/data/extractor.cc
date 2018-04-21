@@ -70,8 +70,8 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
       kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
 
       // Look through search spacej;w
-      for (int di=-ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
-        for (int dj=-ps::kMinSearchDist; dj<=ps::kMaxSearchDist/2; dj++) {
+      for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
+        for (int dj=ps::kMinSearchDist; dj<=ps::kMaxSearchDist/2; dj++) {
           int i2 = i1 + di;
           int j2 = j1 + dj;
 
