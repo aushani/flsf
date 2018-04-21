@@ -3,14 +3,17 @@
 #include <iostream>
 #include <string>
 
+#include <boost/filesystem.hpp>
 #include <Eigen/Core>
+
+namespace fs = boost::filesystem;
 
 namespace library {
 namespace kitti {
 
 class CameraCal {
  public:
-  CameraCal(const std::string &dirname);
+  CameraCal(const fs::path &dirname);
 
   bool InCameraView(double x, double y, double z) const;
 

@@ -6,52 +6,77 @@ namespace library {
 namespace kitti {
 
 ObjectClass IntToObjectClass(int x) {
-  ObjectClass c = ObjectClass::NO_OBJECT;
-
   switch(x) {
     case 0:
-      c = ObjectClass::CAR;
-      break;
+      return ObjectClass::CAR;
 
     case 1:
-      c = ObjectClass::CYCLIST;
-      break;
+      return ObjectClass::CYCLIST;
 
     case 2:
-      c = ObjectClass::MISC;
-      break;
+      return ObjectClass::MISC;
 
     case 3:
-      c = ObjectClass::NO_OBJECT;
-      break;
+      return ObjectClass::NO_OBJECT;
 
     case 4:
-      c = ObjectClass::PEDESTRIAN;
-      break;
+      return ObjectClass::PEDESTRIAN;
 
     case 5:
-      c = ObjectClass::TRAM;
-      break;
+      return ObjectClass::TRAM;
 
     case 6:
-      c = ObjectClass::TRUCK;
-      break;
+      return ObjectClass::TRUCK;
 
     case 7:
-      c = ObjectClass::VAN;
-      break;
+      return ObjectClass::VAN;
 
     case 8:
-      c = ObjectClass::PERSON_SITTING;
-      break;
+      return ObjectClass::PERSON_SITTING;
 
     default:
       // Show have gotten something by now
       BOOST_ASSERT(false);
-      break;
   }
 
-  return c;
+  return ObjectClass::NO_OBJECT;
+}
+
+int ObjectClassToInt(const ObjectClass &c) {
+  switch(c) {
+    case ObjectClass::CAR:
+      return 0;
+
+    case ObjectClass::CYCLIST:
+      return 1;
+
+    case ObjectClass::MISC:
+      return 2;
+
+    case ObjectClass::NO_OBJECT:
+      return 3;
+
+    case ObjectClass::PEDESTRIAN:
+      return 4;
+
+    case ObjectClass::TRAM:
+      return 5;
+
+    case ObjectClass::TRUCK:
+      return 6;
+
+    case ObjectClass::VAN:
+      return 7;
+
+    case ObjectClass::PERSON_SITTING:
+      return 8;
+
+    default:
+      // Show have gotten something by now
+      BOOST_ASSERT(false);
+  }
+
+  return -1;
 }
 
 ObjectClass StringToObjectClass(const std::string &s) {
@@ -67,7 +92,7 @@ ObjectClass StringToObjectClass(const std::string &s) {
     return ObjectClass::MISC;
   }
 
-  if (s == "NO_OBJECT") {
+  if (s == "NoObject") {
     return ObjectClass::NO_OBJECT;
   }
 
@@ -107,7 +132,7 @@ std::string ObjectClassToString(const ObjectClass &c) {
       return "Misc";
 
     case ObjectClass::NO_OBJECT:
-      return "NO_OBJECT";
+      return "NoObject";
 
     case ObjectClass::PEDESTRIAN:
       return "Pedestrian";

@@ -4,6 +4,7 @@ cc_binary(
     deps = [
             "//library/kitti",
             "//library/kitti/nodes",
+            "//library/params",
             "//library/ray_tracing",
             "//library/ray_tracing/nodes",
             "//library/timer",

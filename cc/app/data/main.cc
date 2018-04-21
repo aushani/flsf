@@ -4,6 +4,8 @@
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 
+#include "app/data/extractor.h"
+
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
@@ -15,6 +17,7 @@ int main(int argc, char** argv) {
     ("tsf-data-dir", po::value<std::string>(), "TSF Data Directory")
     ("kitti-log-date", po::value<std::string>(), "KITTI data")
     ("log-num,l", po::value<int>(), "KITTI Log Number")
+    ("save-path,p", po::value<fs::path>(), "Where to save matches")
     ;
 
   // Read options
@@ -42,6 +45,14 @@ int main(int argc, char** argv) {
     log_num = vm["log-num"].as<int>();
   }
 
+  fs::path save_path;
+  if (vm.count("save-path")) {
+    save_path = vm["save-path"].as<fs::path>();
+  } else {
+    printf("Need save path!\n");
+    return 1;
+  }
+
   printf("Using log %d\n", log_num);
 
   // Check that path exists
@@ -50,7 +61,18 @@ int main(int argc, char** argv) {
 
   if (!fs::exists(base_path)) {
     printf("Cannot read data from %s\n", base_path.c_str());
+    return 1;
   }
+
+  if (!fs::exists(save_path)) {
+    fs::create_directories(save_path);
+  }
+
+  app::data::Extractor extractor(base_path, save_path);
+
+  extractor.Run();
+
+  printf("\nDone\n");
 
   return 0;
 }

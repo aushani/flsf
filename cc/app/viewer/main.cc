@@ -6,6 +6,7 @@
 #include "library/kitti/tracklets.h"
 #include "library/kitti/nodes/point_cloud.h"
 #include "library/kitti/nodes/tracklets.h"
+#include "library/params/params.h"
 #include "library/osg_nodes/car.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
@@ -15,6 +16,7 @@
 #include "app/viewer/simple_handler.h"
 
 namespace kt = library::kitti;
+namespace ps = library::params;
 namespace rt = library::ray_tracing;
 namespace vw = library::viewer;
 namespace fs = boost::filesystem;
@@ -112,7 +114,7 @@ int main(int argc, char** argv) {
   printf("Have %ld points\n", scan.GetHits().size());
 
   // Build occ grid
-  rt::OccGridBuilder builder(150000, 0.2, 100.0);
+  rt::OccGridBuilder builder(ps::kMaxVelodyneScanPoints, ps::kResolution, ps::kMaxRange);
 
   library::timer::Timer t;
   auto og = builder.GenerateOccGrid(scan.GetHits());

@@ -6,9 +6,9 @@
 namespace library {
 namespace kitti {
 
-CameraCal::CameraCal(const std::string &dirname) {
-  FILE *f_cc = fopen( (dirname + "/calib_cam_to_cam.txt").c_str(), "r");
-  FILE *f_vc = fopen( (dirname + "/calib_velo_to_cam.txt").c_str(), "r");
+CameraCal::CameraCal(const fs::path &dirname) {
+  FILE *f_cc = fopen( (dirname / "calib_cam_to_cam.txt").c_str(), "r");
+  FILE *f_vc = fopen( (dirname / "calib_velo_to_cam.txt").c_str(), "r");
 
   LoadIntrinsics(f_cc);
   LoadExtrinsics(f_vc);

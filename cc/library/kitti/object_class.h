@@ -18,6 +18,7 @@ enum class ObjectClass {
 };
 
 ObjectClass IntToObjectClass(int x);
+int ObjectClassToInt(const ObjectClass &c);
 ObjectClass StringToObjectClass(const std::string &s);
 std::string ObjectClassToString(const ObjectClass &c);
 
