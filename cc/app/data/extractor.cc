@@ -34,7 +34,7 @@ void Extractor::Write(const rt::OccGrid &og, int i, int j) {
         rt::Location loc(ii, jj, kk);
 
         float p = og.GetProbability(loc);
-        save_file_ << p;
+        save_file_.write(reinterpret_cast<const char*>(&p), sizeof(float));
       }
     }
   }
@@ -99,10 +99,10 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
           Write(og2, i2, j2);
 
           int object_type = kt::ObjectClassToInt(c);
-          save_file_ << object_type;
+          save_file_.write(reinterpret_cast<const char*>(&object_type), sizeof(int));
 
           int match_flag = match ? 1:0;
-          save_file_ << match_flag;
+          save_file_.write(reinterpret_cast<const char*>(&match_flag), sizeof(int));
 
           count_written_++;
         }
