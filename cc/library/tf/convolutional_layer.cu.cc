@@ -15,7 +15,8 @@ ConvolutionalLayer::ConvolutionalLayer(const gu::GpuData<4, float> &weights, con
 }
 
 __global__ void ApplyKernel(const gu::GpuData<4, float> weights, const gu::GpuData<1, float> biases,
-                            const gu::GpuData<3, float> input, gu::GpuData<3, float> output, bool relu) {
+                            const gu::GpuData<3, float> input, gu::GpuData<3,
+                            float> output, bool relu, bool leaky_relu) {
   // Figure out which hit this thread is processing
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
@@ -83,6 +84,17 @@ __global__ void ApplyKernel(const gu::GpuData<4, float> weights, const gu::GpuDa
     }
   }
 
+  if (leaky_relu) {
+    for (int k=0; k<output.GetDim(2); k++) {
+      //if (output(idx_i, idx_j, k) < 0) {
+      //  output(idx_i, idx_j, k) = 0.0;
+      //}
+      if (res[k] < 0) {
+        res[k] *= 0.2;
+      }
+    }
+  }
+
   // Write result
   for (int k=0; k<output.GetDim(2); k++) {
     output(idx_i, idx_j, k) = res[k];
@@ -113,7 +125,8 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
         threads.x, threads.y, blocks.x, blocks.y);
 
   t.Start();
-  ApplyKernel<<<blocks, threads>>>(weights_, biases_, input, *output, true);
+  ApplyKernel<<<blocks, threads>>>(weights_, biases_, input, *output,
+                                   false, true); // Leaky RELU
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
   printf("\tKernel took %5.3f ms\n", t.GetMs());
