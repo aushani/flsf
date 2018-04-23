@@ -20,11 +20,16 @@ class MetricLearning:
 
         self.latent_dim = 25
 
+        self.default_keep_prob = 0.8
+
         # Inputs
         self.occ     = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height])
 
         self.occ1    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height])
         self.occ2    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height])
+
+        # Dropout
+        self.keep_prob = tf.placeholder(tf.float32)
 
         self.match       = tf.placeholder(tf.float32, shape=[None,])
         self.true_label  = tf.placeholder(tf.int32, shape=[None,])
@@ -33,13 +38,13 @@ class MetricLearning:
         self.latent = self.make_encoder(self.occ)
 
         # Decoder
-        self.recon = self.make_decoder(self.latent)
+        #self.recon = self.make_decoder(self.latent)
 
         # Classifier
         self.pred_label = self.make_classifier(self.occ)
 
         # Reconstruction loss
-        recon_loss = tf.reduce_mean(tf.squared_difference(self.occ, self.recon))
+        #recon_loss = tf.reduce_mean(tf.squared_difference(self.occ, self.recon))
 
         # Metric distance loss
         self.dist, metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.match)
@@ -50,7 +55,8 @@ class MetricLearning:
         correct_prediction = tf.equal(self.true_label, tf.cast(tf.argmax(self.pred_label, 1), tf.int32))
         self.clasf_accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-        self.loss = recon_loss + metric_loss + clasf_loss
+        #self.loss = recon_loss + metric_loss + clasf_loss
+        self.loss = metric_loss + clasf_loss
 
         # Optimizer
         self.opt = tf.train.AdamOptimizer(1e-6)
@@ -62,7 +68,7 @@ class MetricLearning:
         self.sess = tf.Session()
 
         # Summaries
-        recon_loss_sum = tf.summary.scalar('reconstruction loss', recon_loss)
+        #recon_loss_sum = tf.summary.scalar('reconstruction loss', recon_loss)
         metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
         clasf_loss_sum = tf.summary.scalar('classification loss', clasf_loss)
 
@@ -76,20 +82,28 @@ class MetricLearning:
     def make_encoder(self, occ):
         with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
             flatten = tf.contrib.layers.flatten(occ)
+            flatten_do = tf.nn.dropout(flatten, self.keep_prob)
 
-            l1 = tf.contrib.layers.fully_connected(flatten, 200, activation_fn = tf.nn.relu, scope='l1')
-            l2 = tf.contrib.layers.fully_connected(l1, 100, activation_fn = tf.nn.relu, scope='l2')
-            l3 = tf.contrib.layers.fully_connected(l2, 50, activation_fn = tf.nn.relu, scope='l3')
+            l1 = tf.contrib.layers.fully_connected(flatten_do, 200, activation_fn = tf.nn.leaky_relu, scope='l1')
+            l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            latent = tf.contrib.layers.fully_connected(l3, self.latent_dim, activation_fn = tf.nn.relu, scope='latent')
+            l2 = tf.contrib.layers.fully_connected(l1_do, 100, activation_fn = tf.nn.leaky_relu, scope='l2')
+            l2_do = tf.nn.dropout(l2, self.keep_prob)
 
-        return latent
+            l3 = tf.contrib.layers.fully_connected(l2_do, 50, activation_fn = tf.nn.leaky_relu, scope='l3')
+            l3_do = tf.nn.dropout(l3, self.keep_prob)
+
+            latent = tf.contrib.layers.fully_connected(l3_do, self.latent_dim, activation_fn = tf.nn.leaky_relu, scope='latent')
+            latent_do = tf.nn.dropout(latent, self.keep_prob)
+
+        return latent_do
 
     def make_decoder(self, latent):
+        # TODO Dropout
         with tf.variable_scope('Decoder', reuse=tf.AUTO_REUSE):
-            l1 = tf.contrib.layers.fully_connected(latent, 50, activation_fn = tf.nn.relu, scope='l1')
-            l2 = tf.contrib.layers.fully_connected(l1, 100, activation_fn = tf.nn.relu, scope='l2')
-            l3 = tf.contrib.layers.fully_connected(l2, 200, activation_fn = tf.nn.relu, scope='l3')
+            l1 = tf.contrib.layers.fully_connected(latent, 50, activation_fn = tf.nn.leaky_relu, scope='l1')
+            l2 = tf.contrib.layers.fully_connected(l1, 100, activation_fn = tf.nn.leaky_relu, scope='l2')
+            l3 = tf.contrib.layers.fully_connected(l2, 200, activation_fn = tf.nn.leaky_relu, scope='l3')
 
             output_flat = tf.contrib.layers.fully_connected(l3, self.dim_data, activation_fn = tf.nn.sigmoid, scope='output')
             output = tf.reshape(output_flat, [-1, self.width, self.length, self.height])
@@ -99,7 +113,7 @@ class MetricLearning:
     def make_classifier(self, occ):
         latent = self.make_encoder(occ)
 
-        output = tf.contrib.layers.fully_connected(latent, self.n_classes, activation_fn = tf.nn.relu, scope="classifier")
+        output = tf.contrib.layers.fully_connected(latent, self.n_classes, activation_fn = tf.nn.leaky_relu, scope="classifier")
 
         return output
 
@@ -111,22 +125,22 @@ class MetricLearning:
 
         loss = match * tf.nn.sigmoid(dist) + (1 - match) * tf.nn.sigmoid(-dist)
 
-        return dist, tf.reduce_sum(loss)
+        return dist, tf.reduce_mean(loss)
 
     def eval_latent(self, data):
-        fd = {self.occ: data}
+        fd = {self.occ: data, self.keep_prob: 1}
         latent = self.latent.eval(session = self.sess, feed_dict = fd)
 
         return latent
 
     def eval_dist(self, occ1, occ2):
-        fd = {self.occ1: occ1, self.occ2: occ2}
+        fd = {self.occ1: occ1, self.occ2: occ2, self.keep_prob: 1}
         dist = self.dist.eval(session = self.sess, feed_dict = fd)
 
         return dist
 
     def eval_classifcation_prob(self, occ):
-        fd = {self.occ: occ}
+        fd = {self.occ: occ, self.keep_prob: 1}
 
         tf_probs = tf.nn.softmax(logits = self.pred_label)
 
@@ -156,6 +170,7 @@ class MetricLearning:
                      self.occ2: valid_set.occ2,
                      self.match: valid_set.match,
                      self.true_label: valid_set.label1,
+                     self.keep_prob : 1.0,
                    }
 
         iteration = 0
@@ -213,6 +228,7 @@ class MetricLearning:
                    self.occ2: samples.occ2,
                    self.match: samples.match,
                    self.true_label: samples.label1,
+                   self.keep_prob: self.default_keep_prob,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -226,7 +242,7 @@ class MetricLearning:
 
         plt.clf()
 
-        self.make_pr_curve(validation.match, -distances, 'Metric Learning')
+        self.make_pr_curve(dataset.match, -distances, 'Metric Learning')
 
         if save:
             plt.savefig(save)
