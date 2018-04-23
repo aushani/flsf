@@ -79,7 +79,7 @@ class DataManager:
 
         self.idx_at = 0
         self.idxs = np.arange(0, count)
-        #np.random.shuffle(self.idxs)
+        np.random.shuffle(self.idxs)
 
         self.reserved = [False,] * self.num_samples
 

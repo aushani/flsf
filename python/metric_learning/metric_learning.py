@@ -155,13 +155,13 @@ class MetricLearning:
                      self.occ1: valid_set.occ1,
                      self.occ2: valid_set.occ2,
                      self.match: valid_set.match,
-                     self.true_label: valid_set.int_label1,
+                     self.true_label: valid_set.label1,
                    }
 
         iteration = 0
 
-        it_save = 1000
-        it_plot = 1000
+        it_save = 10000
+        it_plot = 10000
         it_summ = 100
 
         t_sum = 0
@@ -212,7 +212,7 @@ class MetricLearning:
                    self.occ1: samples.occ1,
                    self.occ2: samples.occ2,
                    self.match: samples.match,
-                   self.true_label: samples.int_label1,
+                   self.true_label: samples.label1,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -223,11 +223,9 @@ class MetricLearning:
 
     def make_metric_plot(self, dataset, save=None, show=False):
         distances = self.eval_dist(dataset.occ1, dataset.occ2)
-        scores = dataset.get_scores()
 
         plt.clf()
 
-        self.make_pr_curve(validation.match, scores, 'ICRA 2017')
         self.make_pr_curve(validation.match, -distances, 'Metric Learning')
 
         if save:
@@ -241,7 +239,7 @@ class MetricLearning:
         for i in range(self.n_classes):
             classname = sample.idx_to_classes[i]
 
-            true_label = dataset.int_label1 == i
+            true_label = dataset.label1 == i
             pred_label = probs[:, i]
 
             self.make_pr_curve(true_label, pred_label, classname)
