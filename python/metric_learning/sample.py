@@ -16,6 +16,10 @@ class Sample:
         self.occ1 = data['occ1'].reshape((self.width, self.length, self.height))
         self.occ2 = data['occ2'].reshape((self.width, self.length, self.height))
 
+        # Rescale range from 0-1 to -0.5 - +0.5
+        self.occ1 -= 0.5
+        self.occ2 -= 0.5
+
         self.label1 = data['label1']
         self.match = data['match']
 
