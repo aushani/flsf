@@ -29,18 +29,18 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   }
 
   // Find p_background
-  float denom = 0.0;
-  for (int k=0; k<classification.GetDim(2); k++) {
-    denom += exp(classification(i, j, k));
-  }
-  float p_background = exp(classification(i, j, 3))/denom;
+  //float denom = 0.0;
+  //for (int k=0; k<classification.GetDim(2); k++) {
+  //  denom += exp(classification(i, j, k));
+  //}
+  //float p_background = exp(classification(i, j, 3))/denom;
 
-  if (p_background > 0.5) {
-    res(i, j, 0) = 0;
-    res(i, j, 1) = 0;
+  //if (p_background > 0.5) {
+  //  res(i, j, 0) = 0;
+  //  res(i, j, 1) = 0;
 
-    return;
-  }
+  //  return;
+  //}
 
 
   // Find best distance

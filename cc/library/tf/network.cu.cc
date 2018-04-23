@@ -11,7 +11,7 @@ Network::Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, con
  cl3_(l3),
  clatent_(latent),
  cl_classifier_(clc),
- input_(167, 167, 14),
+ input_(167, 167, 12),
  res_cl1_(167, 167, 200),
  res_cl2_(167, 167, 100),
  res_cl3_(167, 167, 50),
@@ -36,7 +36,8 @@ __global__ void SetUnknown(gu::GpuData<3, float> dense) {
     return;
   }
 
-  dense.GetRawPointer()[idx] = 0.5;
+  //dense.GetRawPointer()[idx] = 0.5;
+  dense.GetRawPointer()[idx] = 0.0;
 }
 
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
@@ -53,14 +54,6 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
 
   const auto &loc = locations(idx);
   float lo = log_odds(idx);
-
-  // XXX TRAIN THIS OUT ///////////////
-  // Clip /////////////////////////////
-  const float l_max = 3.0;
-  const float l_min = -1.0;
-  if (lo > l_max) lo = l_max;
-  if (lo < l_min) lo = l_min;
-  /////////////////////////////////////
   float p = 1.0 / (1.0 + expf(-lo));
 
   int i = loc.i + dense.GetDim(0)/2;
@@ -79,19 +72,14 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
     return;
   }
 
-  dense(i, j, k) = p;
+  float val = p - 0.5;
+
+  dense(i, j, k) = val;
 }
 
 void Network::SetInput(const rt::OccGrid &og) {
   // Get size
   int sz = og.GetLocations().size();
-
-  // Make GpuData objects
-  gu::GpuData<1, rt::Location> locations(sz);
-  locations.CopyFrom(og.GetLocations());
-
-  gu::GpuData<1, float> log_odds(sz);
-  log_odds.CopyFrom(og.GetLogOdds());
 
   // Clear (set unknown)
   int threads = 1024;
@@ -100,12 +88,21 @@ void Network::SetInput(const rt::OccGrid &og) {
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 
-  // Copy over
-  threads = 1024;
-  blocks = std::ceil(static_cast<float>(sz)/threads);
-  CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
-  err = cudaDeviceSynchronize();
-  BOOST_ASSERT(err == cudaSuccess);
+  if (og.GetLocations().size() > 0) {
+    // Make GpuData objects
+    gu::GpuData<1, rt::Location> locations(sz);
+    locations.CopyFrom(og.GetLocations());
+
+    gu::GpuData<1, float> log_odds(sz);
+    log_odds.CopyFrom(og.GetLogOdds());
+
+    // Copy over
+    threads = 1024;
+    blocks = std::ceil(static_cast<float>(sz)/threads);
+    CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
+    err = cudaDeviceSynchronize();
+    BOOST_ASSERT(err == cudaSuccess);
+  }
 }
 
 const gu::GpuData<3, float>& Network::GetEncoding() const {
@@ -142,7 +139,7 @@ std::vector<float> Network::LoadFile(const fs::path &path) {
 Network Network::LoadNetwork(const fs::path &path) {
   printf("Loading from path: %s\n", path.c_str());
 
-  gu::GpuData<4, float> l1_weights(7, 7, 14, 200);
+  gu::GpuData<4, float> l1_weights(7, 7, 12, 200);
   gu::GpuData<1, float> l1_biases(200);
 
   gu::GpuData<4, float> l2_weights(1, 1, 200, 100);

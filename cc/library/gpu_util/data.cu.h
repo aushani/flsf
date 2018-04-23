@@ -112,6 +112,7 @@ class Data {
       el = elements_;
     }
 
+    BOOST_ASSERT(data.GetCoalesceDim() == coalesce_dim_);
     BOOST_ASSERT(data.Size() >= el);
     BOOST_ASSERT(elements_ >= el);
 

@@ -26,6 +26,7 @@ struct DeviceData {
    distance(167, 167, 31, 31),      // XXX magic numbers
    raw_flow(167, 167, 2),           // XXX magic numbers
    classification_map(167, 167) {   // XXX magic numbers
+    last_encoding.SetCoalesceDim(0);
   };
 
   rt::OccGridBuilder og_builder;
@@ -67,8 +68,8 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   data_->network.Apply();
 
   // Get encoding
-  auto encoding = data_->network.GetEncoding();
-  auto classification = data_->network.GetClassification();
+  const auto &encoding = data_->network.GetEncoding();
+  const auto &classification = data_->network.GetClassification();
 
   // Get distance
   data_->distance_computer.ComputeDistance(data_->last_encoding, encoding, &data_->distance);
