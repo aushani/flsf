@@ -23,6 +23,7 @@ class ViewerWindow : public QMainWindow {
   int Start();
 
   void AddChild(osg::Node *n);
+  void RemoveChild(osg::Node *n);
   void RemoveAllChildren();
 
   void AddHandler(osgGA::GUIEventHandler *h);

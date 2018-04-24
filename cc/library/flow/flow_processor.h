@@ -32,7 +32,9 @@ class FlowProcessor {
   void Initialize(const kt::VelodyneScan &scan);
   void Update(const kt::VelodyneScan &scan);
 
-  rt::OccGrid GetLastOccGrid() const;
+  rt::OccGrid GetLastOccGrid1() const;
+  rt::OccGrid GetLastOccGrid2() const;
+
   FlowImage GetFlowImage() const;
   const ClassificationMap& GetClassificationMap() const;
   const DistanceMap& GetDistanceMap() const;

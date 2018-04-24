@@ -109,6 +109,12 @@ void ViewerWindow::AddChild(osg::Node *n) {
   vwidget_->unlock();
 }
 
+void ViewerWindow::RemoveChild(osg::Node *n) {
+  vwidget_->lock();
+  xform_car_->removeChild(n);
+  vwidget_->unlock();
+}
+
 void ViewerWindow::RemoveAllChildren() {
   vwidget_->lock();
   while (xform_car_->getNumChildren() > 0) {

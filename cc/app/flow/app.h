@@ -3,8 +3,10 @@
 #include <thread>
 
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include "library/flow/flow_processor.h"
+#include "library/flow/nodes/distance_map.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/pose.h"
@@ -50,6 +52,8 @@ class App {
   fl::FlowProcessor flow_processor_;
 
   std::shared_ptr<vw::Viewer> viewer_;
+
+  boost::optional<osg::ref_ptr<fl::nodes::DistanceMap> > prev_dm_;
 
   CommandQueue command_queue_;
   std::thread command_thread_;

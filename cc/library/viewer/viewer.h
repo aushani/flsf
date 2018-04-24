@@ -26,6 +26,7 @@ class Viewer {
   Viewer(osg::ArgumentParser *args);
 
   void AddChild(osg::Node *n);
+  void RemoveChild(osg::Node *n);
   void RemoveAllChildren();
 
   void AddHandler(osgGA::GUIEventHandler *h);

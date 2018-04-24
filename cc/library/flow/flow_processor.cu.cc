@@ -37,7 +37,9 @@ struct DeviceData {
   MetricDistance     distance_computer;
   Solver             solver;
 
-  boost::optional<rt::OccGrid>              last_og;
+  boost::optional<rt::OccGrid>              last_og1;   // Flow is from this og
+  boost::optional<rt::OccGrid>              last_og2;   // Flow is to this og
+
   gu::GpuData<3, float>                     last_encoding;
 
   gu::GpuData<4, float>                     distance;
@@ -70,7 +72,7 @@ FlowProcessor FlowProcessor::operator=(const FlowProcessor &fp) {
 
 void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
   auto og = data_->og_builder.GenerateOccGrid(scan.GetHits());
-  data_->last_og = og;
+  data_->last_og2 = og;
 
   data_->network.SetInput(og);
   data_->network.Apply();
@@ -96,7 +98,8 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   auto fi = data_->solver.ComputeFlow(data_->distance, classification, &data_->raw_flow);
 
   // Update cached state
-  data_->last_og = og;
+  data_->last_og1 = data_->last_og2;
+  data_->last_og2 = og;
   data_->last_encoding.CopyFrom(encoding);
   data_->flow_image = fi;
 
@@ -145,10 +148,16 @@ void FlowProcessor::UpdateDistanceMap() {
   }
 }
 
-rt::OccGrid FlowProcessor::GetLastOccGrid() const {
-  BOOST_ASSERT(data_->last_og);
+rt::OccGrid FlowProcessor::GetLastOccGrid1() const {
+  BOOST_ASSERT(data_->last_og1);
 
-  return *data_->last_og;
+  return *data_->last_og1;
+}
+
+rt::OccGrid FlowProcessor::GetLastOccGrid2() const {
+  BOOST_ASSERT(data_->last_og2);
+
+  return *data_->last_og2;
 }
 
 FlowImage FlowProcessor::GetFlowImage() const {

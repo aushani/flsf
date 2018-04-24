@@ -9,7 +9,6 @@
 #include "library/kitti/nodes/tracklets.h"
 #include "library/flow/nodes/flow_image.h"
 #include "library/flow/nodes/classification_map.h"
-#include "library/flow/nodes/distance_map.h"
 #include "library/osg_nodes/car.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
 #include "library/timer/timer.h"
@@ -124,7 +123,7 @@ void App::ProcessFrame(int frame_num) {
   if (viewer_) {
     printf("Update viewer\n");
 
-    rt::OccGrid og = flow_processor_.GetLastOccGrid();
+    rt::OccGrid og = flow_processor_.GetLastOccGrid1();
     fl::FlowImage fi = flow_processor_.GetFlowImage();
     fl::ClassificationMap cm = flow_processor_.GetClassificationMap();
 
@@ -160,7 +159,14 @@ void App::QueueCommand(const Command &command) {
 void App::HandleClick(const Command &command) {
   fl::DistanceMap dm = flow_processor_.GetDistanceMap();
   osg::ref_ptr<fl::nodes::DistanceMap> dmn = new fl::nodes::DistanceMap(dm, command.GetClickX(), command.GetClickY());
+
+  // Remove prev dm
+  if (prev_dm_) {
+    viewer_->RemoveChild(*prev_dm_);
+  }
+
   viewer_->AddChild(dmn);
+  prev_dm_ = dmn;
 }
 
 void App::ProcessCommands() {

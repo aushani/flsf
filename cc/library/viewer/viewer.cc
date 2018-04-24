@@ -16,6 +16,10 @@ void Viewer::AddChild(osg::Node *n) {
   vwindow_->AddChild(n);
 }
 
+void Viewer::RemoveChild(osg::Node *n) {
+  vwindow_->RemoveChild(n);
+}
+
 void Viewer::AddHandler(osgGA::GUIEventHandler *h) {
   vwindow_->AddHandler(h);
 }

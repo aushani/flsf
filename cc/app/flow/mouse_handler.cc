@@ -15,6 +15,16 @@ MouseHandler::MouseHandler(const std::shared_ptr<App> &app) :
 void MouseHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
   osgUtil::LineSegmentIntersector::Intersections intersections;
 
+  bool ctrl = false;
+  if (ea.getModKeyMask() && osgGA::GUIEventAdapter::ModKeyMask::MODKEY_CTRL) {
+    ctrl = true;
+  }
+
+  // Only ctrl+clicks for now
+  if (!ctrl) {
+    return;
+  }
+
   if (view->computeIntersections(ea, intersections)) {
     for (osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin();
          hitr != intersections.end(); ++hitr) {
