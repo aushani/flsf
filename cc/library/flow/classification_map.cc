@@ -5,9 +5,10 @@
 namespace library {
 namespace flow {
 
-ClassificationMap::ClassificationMap(int nx, int ny) :
+ClassificationMap::ClassificationMap(int nx, int ny, float res) :
  size_x_(nx),
  size_y_(ny),
+ resolution_(res),
  scores_(nx*ny) {
 }
 
@@ -32,6 +33,10 @@ int ClassificationMap::MinY() const {
 
 int ClassificationMap::MaxY() const {
   return MinY() + size_y_- 1;
+}
+
+float ClassificationMap::GetResolution() const {
+  return resolution_;
 }
 
 bool ClassificationMap::InRange(int i, int j) const {

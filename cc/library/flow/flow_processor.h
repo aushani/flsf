@@ -24,7 +24,10 @@ typedef struct DeviceData DeviceData;
 class FlowProcessor {
  public:
   FlowProcessor(const fs::path &data_path);
+  FlowProcessor(const FlowProcessor &fp);
   ~FlowProcessor();
+
+  FlowProcessor operator=(const FlowProcessor &fp);
 
   void Initialize(const kt::VelodyneScan &scan);
   void Update(const kt::VelodyneScan &scan);
@@ -35,11 +38,7 @@ class FlowProcessor {
   const DistanceMap& GetDistanceMap() const;
 
  private:
-  static constexpr int kMaxVelodyneScanPoints = 150000;
-  static constexpr float kResolution = 0.3;
-  static constexpr float kMaxRange = 100.0;
-
-  std::unique_ptr<DeviceData> data_;
+  std::shared_ptr<DeviceData> data_;
 
   void UpdateClassificationMap();
   void UpdateDistanceMap();

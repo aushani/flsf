@@ -7,10 +7,12 @@
 #include "library/gpu_util/gpu_data.cu.h"
 #include "library/gpu_util/host_data.cu.h"
 #include "library/kitti/object_class.h"
+#include "library/params/params.h"
 
 #include "library/flow/metric_distance.cu.h"
 #include "library/flow/solver.cu.h"
 
+namespace ps = library::params;
 namespace tf = library::tf;
 
 namespace library {
@@ -22,11 +24,11 @@ struct DeviceData {
    network(tf::Network::LoadNetwork(data_path)),
    distance_computer(),
    solver(),
-   last_encoding(167, 167, 25),     // XXX magic numbers
-   distance(167, 167, 31, 31),      // XXX magic numbers
-   raw_flow(167, 167, 2),           // XXX magic numbers
-   classification_map(167, 167),    // XXX magic numbers
-   distance_map(167, 167, 31) {     // XXX magic numbers
+   last_encoding(167, 167, 25),          // XXX magic numbers
+   distance(167, 167, 31, 31),           // XXX magic numbers
+   raw_flow(167, 167, 2),                // XXX magic numbers
+   classification_map(167, 167, res),    // XXX magic numbers
+   distance_map(167, 167, 31, res) {     // XXX magic numbers
     last_encoding.SetCoalesceDim(0);
   };
 
@@ -47,10 +49,23 @@ struct DeviceData {
 };
 
 FlowProcessor::FlowProcessor(const fs::path &data_path) :
- data_(new DeviceData(kMaxVelodyneScanPoints, kResolution, kMaxRange, data_path)) {
+ data_(std::make_shared<DeviceData>(ps::kMaxVelodyneScanPoints,
+                                    ps::kResolution,
+                                    ps::kMaxRange,
+                                    data_path)) {
+}
+
+FlowProcessor::FlowProcessor(const FlowProcessor &fp) :
+ data_(fp.data_) {
 }
 
 FlowProcessor::~FlowProcessor() {
+}
+
+FlowProcessor FlowProcessor::operator=(const FlowProcessor &fp) {
+  data_ = fp.data_;
+
+  return *this;
 }
 
 void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {

@@ -5,10 +5,11 @@
 namespace library {
 namespace flow {
 
-DistanceMap::DistanceMap(int nx, int ny, int window_size) :
+DistanceMap::DistanceMap(int nx, int ny, int window_size, float res) :
  size_x_(nx),
  size_y_(ny),
  window_size_(window_size),
+ resolution_(res),
  distances_(nx*ny*window_size*window_size) {
 }
 
@@ -44,6 +45,10 @@ int DistanceMap::MinOffset() const {
 
 int DistanceMap::MaxOffset() const {
   return MinOffset() + window_size_ - 1;
+}
+
+float DistanceMap::GetResolution() const {
+  return resolution_;
 }
 
 bool DistanceMap::InRange(int i, int j, int di, int dj) const {

@@ -1,4 +1,6 @@
-#include "library/flow/nodes/classification_map.h"
+#include "library/flow/nodes/distance_map.h"
+
+#include <boost/assert.hpp>
 
 #include "library/kitti/object_class.h"
 
@@ -8,10 +10,15 @@ namespace library {
 namespace flow {
 namespace nodes {
 
-ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm) :
+DistanceMap::DistanceMap(const fl::DistanceMap &dm, float x, float y) :
  osg::Group() {
+  int i0 = std::round(x / dm.GetResolution());
+  int j0 = std::round(y / dm.GetResolution());
+
+  BOOST_ASSERT(dm.InRange(i0, j0, 0, 0));
+
   // Get image
-  osg::ref_ptr<osg::Image> im = GetImage(cm);
+  osg::ref_ptr<osg::Image> im = GetImage(dm, i0, j0);
 
   // Now set up render
   osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D();
@@ -24,15 +31,16 @@ ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm) :
 
   osg::ref_ptr<osg::Geode> geode = new osg::Geode();
 
-  double x0 = cm.MinX();
-  double y0 = cm.MinY();
-  int width = cm.MaxX() - cm.MinX() + 1;
-  int height = cm.MaxY() - cm.MinY() + 1;
 
-  SetUpTexture(texture, geode, x0, y0, width, height, 12);
+  int width = dm.MaxOffset() - dm.MinOffset() + 1;
+  int height = width;
+
+  double x0 = i0 + dm.MinOffset();
+  double y0 = j0 + dm.MinOffset();
+  SetUpTexture(texture, geode, x0, y0, width, height, 13);
 
   osg::Matrix m = osg::Matrix::identity();
-  m.makeScale(cm.GetResolution(), cm.GetResolution(), cm.GetResolution());
+  m.makeScale(dm.GetResolution(), dm.GetResolution(), dm.GetResolution());
   //m.postMultTranslate(osg::Vec3d(x0_, y0_, -1.7)); // ground plane
   //m.postMultTranslate(osg::Vec3d(x0, y0, 0)); // ground plane
 
@@ -44,28 +52,24 @@ ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm) :
   addChild(map_image);
 }
 
-osg::ref_ptr<osg::Image> ClassificationMap::GetImage(const fl::ClassificationMap &cm) {
+osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0, int j0) {
   const int depth = 1;
 
   osg::ref_ptr<osg::Image> im = new osg::Image();
 
-  int width = cm.MaxX() - cm.MinX() + 1;
-  int height = cm.MaxY() - cm.MinY() + 1;
+  int width = dm.MaxOffset() - dm.MinOffset() + 1;
+  int height = width;
   im->allocateImage(width, height, depth, GL_RGBA, GL_FLOAT);
 
   for (int i = 0; i < width; i++) {
     for (int j = 0; j < height; j++) {
-      int ii = cm.MinX() + i;
-      int jj = cm.MinY() + j;
+      int di = dm.MinOffset() + i;
+      int dj = dm.MinOffset() + j;
 
-      double p_car = cm.GetClassProbability(ii, jj, kt::ObjectClass::CAR);
-      //double p_back = cm.GetClassProbability(ii, jj, ObjectClass::NO_OBJECT);
+      double dist = dm.GetDistance(i0, j0, di, dj);
 
-      double lo = -std::log(1/p_car - 1);
+      double val = dist / 20.0;
 
-      double lmin = -3;
-      double lmax = 0;
-      double val = (lo - lmin) / (lmax - lmin);
       if (val > 1) val = 1;
       if (val < 0) val = 0;
 
@@ -81,7 +85,7 @@ osg::ref_ptr<osg::Image> ClassificationMap::GetImage(const fl::ClassificationMap
   return im;
 }
 
-void ClassificationMap::SetUpTexture(osg::Texture2D *texture, osg::Geode *geode, double x0, double y0, int width, int height, int bin_num) const {
+void DistanceMap::SetUpTexture(osg::Texture2D *texture, osg::Geode *geode, double x0, double y0, int width, int height, int bin_num) const {
   // Adapted from dascar
 
   osg::ref_ptr<osg::Geometry> geometry = new osg::Geometry();

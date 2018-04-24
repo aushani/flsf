@@ -10,7 +10,7 @@ namespace flow {
 
 class DistanceMap {
  public:
-  DistanceMap(int nx, int ny, int window_size);
+  DistanceMap(int nx, int ny, int window_size, float res);
 
   void SetDistance(int i, int j, int di, int dj, float dist);
 
@@ -23,12 +23,16 @@ class DistanceMap {
   int MaxOffset() const;
   bool InRange(int i, int j, int di, int dj) const;
 
+  float GetResolution() const;
+
   float GetDistance(int i, int j, int di, int dj) const;
 
  private:
   size_t size_x_;
   size_t size_y_;
   size_t window_size_;
+
+  float resolution_;
 
   std::vector<float> distances_;
 

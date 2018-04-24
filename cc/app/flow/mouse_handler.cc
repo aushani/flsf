@@ -21,7 +21,10 @@ void MouseHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea)
 
       osg::Vec3 p = hitr->getWorldIntersectPoint();
 
-      printf("clock at %f %f\n", p[0], p[1]);
+      Command command(Type::CLICK_AT);
+      command.SetClickPosition(p[0], p[1]);
+      app_->QueueCommand(command);
+
       break;
     }
   }

@@ -8,25 +8,10 @@ namespace app {
 namespace flow {
 
 CommandQueue::CommandQueue() {
-
-}
-
-bool CommandQueue::Push(char c) {
-  switch(c) {
-    case 'N':
-    queue_.push(NEXT);
-    return true;
-
-    default:
-    // No command
-    break;
-  }
-
-  return false;
 }
 
 Command CommandQueue::Pop(int timeout_ms) {
-  Command c = NONE;
+  Command c(Type::NONE);
 
   {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -41,7 +26,7 @@ Command CommandQueue::Pop(int timeout_ms) {
   return c;
 }
 
-void CommandQueue::Push(Command c) {
+void CommandQueue::Push(const Command &c) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     queue_.push(c);

@@ -6,27 +6,22 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "app/flow/command.h"
+
 namespace app {
 namespace flow {
-
-enum Command {
-  NEXT,
-  NONE,
-};
 
 class CommandQueue : boost::noncopyable {
  public:
   CommandQueue();
 
-  bool Push(char c);
+  void Push(const Command &c);
   Command Pop(int timeout_ms);
 
  private:
   std::queue<Command>     queue_;
   std::mutex              mutex_;
   std::condition_variable cond_;
-
-  void Push(Command c);
 };
 
 } // namespace flow

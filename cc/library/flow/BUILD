@@ -28,6 +28,7 @@ cc_library(
             "//library/ray_tracing",
             "//library/timer",
             "//library/tf",
+            "//library/params",
             "//tools:cuda",
             "@boost//:boost_headers",
             "@boost//:boost_filesystem",
