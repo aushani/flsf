@@ -2,6 +2,7 @@ import tensorflow as tf
 from data import *
 import time
 import sample
+import sys
 
 plt.switch_backend('agg')
 
@@ -123,7 +124,13 @@ class MetricLearning:
 
         dist = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
 
-        loss = match * tf.nn.sigmoid(dist) + (1 - match) * tf.nn.sigmoid(-dist)
+        #loss = match * tf.nn.sigmoid(dist) + (1 - match) * tf.nn.sigmoid(-dist)
+        loss = match * dist + (1 - match) *(-dist)
+
+        match_loss = tf.nn.sigmoid(dist - 10)
+        not_match_loss = 1 - tf.nn.sigmoid(dist - 10)
+
+        loss = match * match_loss + (1 - match) * not_match_loss
 
         return dist, tf.reduce_mean(loss)
 
@@ -153,9 +160,10 @@ class MetricLearning:
         saver.restore(self.sess, filename)
         print 'Restored model from', filename
 
-    def train(self):
-        # Initialize variables
-        self.sess.run(tf.global_variables_initializer())
+    def train(self, start_iter = 0):
+        if start_iter == 0:
+            # Initialize variables
+            self.sess.run(tf.global_variables_initializer())
 
         # Set up writer
         self.writer = tf.summary.FileWriter('./logs', self.sess.graph)
@@ -173,7 +181,7 @@ class MetricLearning:
                      self.keep_prob : 1.0,
                    }
 
-        iteration = 0
+        iteration = start_iter
 
         it_save = 10000
         it_plot = 10000
@@ -286,4 +294,12 @@ if __name__ == '__main__':
     validation = dm.validation_set
 
     ml = MetricLearning(dm)
-    ml.train()
+
+    if len(sys.argv) > 1:
+        load_iter = int(sys.argv[1])
+        print 'Loading from iteration %d' % (load_iter)
+
+        ml.restore('model.ckpt-%d' % (load_iter))
+        ml.train(start_iter = load_iter+1)
+    else:
+        ml.train()
