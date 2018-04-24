@@ -1,3 +1,4 @@
 [submodule "OpenSceneGraph"]
-	path = OpenSceneGraph
-	url = https://github.com/openscenegraph/OpenSceneGraph.git
+  path = OpenSceneGraph
+  url = https://github.com/openscenegraph/OpenSceneGraph.git
+  ignore = untracked
