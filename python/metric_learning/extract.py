@@ -1,6 +1,7 @@
 from tensorflow.python.tools import inspect_checkpoint as chkp
 import sys
 import tensorflow as tf
+import numpy as np
 
 if len(sys.argv) < 2:
     print 'Please specify tensorflow model file'
