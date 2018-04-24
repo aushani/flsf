@@ -25,7 +25,8 @@ struct DeviceData {
    last_encoding(167, 167, 25),     // XXX magic numbers
    distance(167, 167, 31, 31),      // XXX magic numbers
    raw_flow(167, 167, 2),           // XXX magic numbers
-   classification_map(167, 167) {   // XXX magic numbers
+   classification_map(167, 167),    // XXX magic numbers
+   distance_map(167, 167, 31) {     // XXX magic numbers
     last_encoding.SetCoalesceDim(0);
   };
 
@@ -39,8 +40,10 @@ struct DeviceData {
 
   gu::GpuData<4, float>                     distance;
   gu::GpuData<3, int>                       raw_flow;
+
   boost::optional<FlowImage>                flow_image;
   ClassificationMap                         classification_map;
+  DistanceMap                               distance_map;
 };
 
 FlowProcessor::FlowProcessor(const fs::path &data_path) :
@@ -82,6 +85,13 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   data_->last_encoding.CopyFrom(encoding);
   data_->flow_image = fi;
 
+  UpdateClassificationMap();
+  UpdateDistanceMap();
+}
+
+void FlowProcessor::UpdateClassificationMap() {
+  const auto &classification = data_->network.GetClassification();
+
   gu::HostData<3, float> hd(classification);
 
   for (int i=0; i<hd.GetDim(0); i++) {
@@ -92,6 +102,29 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
         kt::ObjectClass c = kt::IntToObjectClass(k);
 
         data_->classification_map.SetClassScore(ii, jj, c, hd(i, j, k));
+      }
+    }
+  }
+}
+
+void FlowProcessor::UpdateDistanceMap() {
+  gu::HostData<4, float> hd(data_->distance);
+
+  for (int i=0; i<hd.GetDim(0); i++) {
+    int ii = data_->classification_map.MinX() + i;
+
+    for (int j=0; j<hd.GetDim(1); j++) {
+      int jj = data_->classification_map.MinY() + j;
+
+      for (int kk=0; kk<hd.GetDim(2); kk++) {
+        int di = data_->distance_map.MinOffset() + kk;
+
+        for (int ll=0; ll<hd.GetDim(3); ll++) {
+          int dj = data_->distance_map.MinOffset() + ll;
+
+          float dist = hd(i, j, kk, ll);
+          data_->distance_map.SetDistance(ii, jj, di, dj, dist);
+        }
       }
     }
   }
@@ -110,6 +143,10 @@ FlowImage FlowProcessor::GetFlowImage() const {
 
 const ClassificationMap& FlowProcessor::GetClassificationMap() const {
   return data_->classification_map;
+}
+
+const DistanceMap& FlowProcessor::GetDistanceMap() const {
+  return data_->distance_map;
 }
 
 } // namespace tf

@@ -11,7 +11,7 @@ namespace nodes {
 
 FlowImage::FlowImage(const fl::FlowImage &fi, float res) : osg::Group() {
   float z = 0;
-  osg::Vec4 color(0, 0, 1, 0);
+  osg::Vec4 color(0, 0, 0, 0);
 
   for (int i=fi.MinX(); i<=fi.MaxX(); i++) {
     for (int j=fi.MinY(); j<=fi.MaxY(); j++) {
@@ -37,7 +37,7 @@ FlowImage::FlowImage(const fl::FlowImage &fi, float res) : osg::Group() {
       line->push_back(1);
       geometry->addPrimitiveSet(line);
 
-      osg::ref_ptr<osg::LineWidth> linewidth = new osg::LineWidth(1.0);
+      osg::ref_ptr<osg::LineWidth> linewidth = new osg::LineWidth(2.0);
       geometry->getOrCreateStateSet()->setAttribute(linewidth);
 
       // turn off lighting

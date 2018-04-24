@@ -5,6 +5,7 @@
 
 #include "app/flow/app.h"
 #include "app/flow/handler.h"
+#include "app/flow/click_handler.h"
 
 namespace vw = library::viewer;
 
@@ -55,8 +56,10 @@ int main(int argc, char** argv) {
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
   osg::ref_ptr<app::flow::Handler> handler(new app::flow::Handler(app));
+  osg::ref_ptr<app::flow::ClickHandler> click_handler(new app::flow::ClickHandler(app));
 
   viewer->AddHandler(handler);
+  viewer->AddHandler(click_handler);
   app->SetViewer(viewer);
 
   // Process the first frame

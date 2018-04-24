@@ -9,6 +9,7 @@
 
 #include "library/flow/flow_image.h"
 #include "library/flow/classification_map.h"
+#include "library/flow/distance_map.h"
 
 namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
@@ -31,6 +32,7 @@ class FlowProcessor {
   rt::OccGrid GetLastOccGrid() const;
   FlowImage GetFlowImage() const;
   const ClassificationMap& GetClassificationMap() const;
+  const DistanceMap& GetDistanceMap() const;
 
  private:
   static constexpr int kMaxVelodyneScanPoints = 150000;
@@ -38,6 +40,9 @@ class FlowProcessor {
   static constexpr float kMaxRange = 100.0;
 
   std::unique_ptr<DeviceData> data_;
+
+  void UpdateClassificationMap();
+  void UpdateDistanceMap();
 };
 
 } // namespace tf
