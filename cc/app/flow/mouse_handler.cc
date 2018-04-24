@@ -1,4 +1,4 @@
-#include "app/flow/click_handler.h"
+#include "app/flow/mouse_handler.h"
 
 #include <iostream>
 
@@ -7,12 +7,12 @@
 namespace app {
 namespace flow {
 
-ClickHandler::ClickHandler(const std::shared_ptr<App> &app) :
+MouseHandler::MouseHandler(const std::shared_ptr<App> &app) :
  library::viewer::PickHandler(),
  app_(app) {
 }
 
-void ClickHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
+void MouseHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
   osgUtil::LineSegmentIntersector::Intersections intersections;
 
   if (view->computeIntersections(ea, intersections)) {

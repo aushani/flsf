@@ -17,13 +17,13 @@
 namespace app {
 namespace flow {
 
-class Handler : public library::viewer::KeyHandler, boost::noncopyable {
+class KeyHandler : public library::viewer::KeyHandler, boost::noncopyable {
  public:
-  Handler(const std::shared_ptr<App> &app);
-  ~Handler();
+  KeyHandler(const std::shared_ptr<App> &app);
+  ~KeyHandler();
 
-  Handler(const Handler &h);
-  Handler& operator=(const Handler &h);
+  KeyHandler(const KeyHandler &h);
+  KeyHandler& operator=(const KeyHandler &h);
 
   bool KeyPress(const osgGA::GUIEventAdapter &ea);
 

@@ -4,8 +4,8 @@
 #include "library/viewer/viewer.h"
 
 #include "app/flow/app.h"
-#include "app/flow/handler.h"
-#include "app/flow/click_handler.h"
+#include "app/flow/key_handler.h"
+#include "app/flow/mouse_handler.h"
 
 namespace vw = library::viewer;
 
@@ -55,11 +55,11 @@ int main(int argc, char** argv) {
   auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
-  osg::ref_ptr<app::flow::Handler> handler(new app::flow::Handler(app));
-  osg::ref_ptr<app::flow::ClickHandler> click_handler(new app::flow::ClickHandler(app));
+  osg::ref_ptr<app::flow::KeyHandler>   key_handler(new app::flow::KeyHandler(app));
+  osg::ref_ptr<app::flow::MouseHandler> mouse_handler(new app::flow::MouseHandler(app));
 
-  viewer->AddHandler(handler);
-  viewer->AddHandler(click_handler);
+  viewer->AddHandler(key_handler);
+  viewer->AddHandler(mouse_handler);
   app->SetViewer(viewer);
 
   // Process the first frame

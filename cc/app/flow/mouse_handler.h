@@ -14,9 +14,9 @@
 namespace app {
 namespace flow {
 
-class ClickHandler : public library::viewer::PickHandler {
+class MouseHandler : public library::viewer::PickHandler {
  public:
-  ClickHandler(const std::shared_ptr<App> &app);
+  MouseHandler(const std::shared_ptr<App> &app);
 
   void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
 
