@@ -10,8 +10,21 @@ namespace library {
 namespace flow {
 namespace nodes {
 
+DistanceMap::DistanceMap() :
+ osg::Group() {
+}
+
 DistanceMap::DistanceMap(const fl::DistanceMap &dm, float x, float y) :
  osg::Group() {
+  Update(dm, x, y);
+}
+
+void DistanceMap::Update(const fl::DistanceMap &dm, float x, float y) {
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
   int i0 = std::round(x / dm.GetResolution());
   int j0 = std::round(y / dm.GetResolution());
 
@@ -35,8 +48,8 @@ DistanceMap::DistanceMap(const fl::DistanceMap &dm, float x, float y) :
   int width = dm.MaxOffset() - dm.MinOffset() + 1;
   int height = width;
 
-  double x0 = i0 + dm.MinOffset();
-  double y0 = j0 + dm.MinOffset();
+  double x0 = i0 + dm.MinOffset() - 0.5;
+  double y0 = j0 + dm.MinOffset() - 0.5;
   SetUpTexture(texture, geode, x0, y0, width, height, 13);
 
   osg::Matrix m = osg::Matrix::identity();
@@ -65,6 +78,17 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
     for (int j = 0; j < height; j++) {
       int di = dm.MinOffset() + i;
       int dj = dm.MinOffset() + j;
+
+      if (di == 0 && dj == 0) {
+        double r = 1.0;
+        double g = 1.0;
+        double b = 1.0;
+
+        osg::Vec4 color(r, g, b, 0.5);
+        im->setColor(color, i, j, 0);
+
+        continue;
+      }
 
       double dist = dm.GetDistance(i0, j0, di, dj);
 
@@ -140,6 +164,10 @@ void DistanceMap::SetUpTexture(osg::Texture2D *texture, osg::Geode *geode, doubl
   // Need to make sure this geometry is draw last. RenderBins are handled
   // in numerical order so set bin number to 11 by default
   state_set->setRenderBinDetails( bin_num, "RenderBin");
+}
+
+void DistanceMap::Render(bool render) {
+  setNodeMask(render);
 }
 
 } // namespace nodes

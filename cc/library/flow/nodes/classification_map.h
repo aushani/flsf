@@ -16,7 +16,12 @@ namespace nodes {
 
 class ClassificationMap : public osg::Group {
  public:
+  ClassificationMap();
   ClassificationMap(const fl::ClassificationMap &cm);
+
+  void Update(const fl::ClassificationMap &cm);
+
+  void Render(bool render);
 
  private:
   osg::ref_ptr<osg::Image> GetImage(const fl::ClassificationMap &cm);

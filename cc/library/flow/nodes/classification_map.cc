@@ -8,8 +8,21 @@ namespace library {
 namespace flow {
 namespace nodes {
 
+ClassificationMap::ClassificationMap() :
+ osg::Group() {
+}
+
 ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm) :
  osg::Group() {
+  Update(cm);
+}
+
+void ClassificationMap::Update(const fl::ClassificationMap &cm) {
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
   // Get image
   osg::ref_ptr<osg::Image> im = GetImage(cm);
 
@@ -24,8 +37,8 @@ ClassificationMap::ClassificationMap(const fl::ClassificationMap &cm) :
 
   osg::ref_ptr<osg::Geode> geode = new osg::Geode();
 
-  double x0 = cm.MinX();
-  double y0 = cm.MinY();
+  double x0 = cm.MinX() - 0.5;
+  double y0 = cm.MinY() - 0.5;
   int width = cm.MaxX() - cm.MinX() + 1;
   int height = cm.MaxY() - cm.MinY() + 1;
 
@@ -59,13 +72,8 @@ osg::ref_ptr<osg::Image> ClassificationMap::GetImage(const fl::ClassificationMap
       int jj = cm.MinY() + j;
 
       double p_car = cm.GetClassProbability(ii, jj, kt::ObjectClass::CAR);
-      //double p_back = cm.GetClassProbability(ii, jj, ObjectClass::NO_OBJECT);
 
-      double lo = -std::log(1/p_car - 1);
-
-      double lmin = -3;
-      double lmax = 0;
-      double val = (lo - lmin) / (lmax - lmin);
+      double val = p_car;
       if (val > 1) val = 1;
       if (val < 0) val = 0;
 
@@ -136,6 +144,10 @@ void ClassificationMap::SetUpTexture(osg::Texture2D *texture, osg::Geode *geode,
   // Need to make sure this geometry is draw last. RenderBins are handled
   // in numerical order so set bin number to 11 by default
   state_set->setRenderBinDetails( bin_num, "RenderBin");
+}
+
+void ClassificationMap::Render(bool render) {
+  setNodeMask(render);
 }
 
 } // namespace nodes

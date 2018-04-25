@@ -41,6 +41,9 @@ void ViewerWindow::Init(osg::ArgumentParser *args) {
   view->getCamera()->setClearColor(osg::Vec4d(1, 1, 1, 0)); // white
   //view->getCamera()->setClearColor(osg::Vec4d(0, 0, 0, 0)); // black
 
+  // ortho
+  //view->getCamera()->setProjectionMatrixAsOrtho(-10, 10, -10, 10, 0, 100);
+
   osg::ref_ptr<osgGA::KeySwitchMatrixManipulator> ksm = new osgGA::KeySwitchMatrixManipulator();
 
   ksm->addMatrixManipulator('1', "TerrainTrackpad", new TerrainTrackpadManipulator());

@@ -16,8 +16,20 @@ namespace library {
 namespace kitti {
 namespace nodes {
 
+Tracklets::Tracklets() :
+ osg::Group() {
+}
+
 Tracklets::Tracklets(kt::Tracklets *tracklets, int frame) :
-    osg::Group() {
+ osg::Group() {
+  Update(tracklets, frame);
+}
+
+void Tracklets::Update(kt::Tracklets *tracklets, int frame) {
+  // Clear any old tracklets
+  while (getNumChildren() > 0) {
+    removeChild(0, 1);
+  }
 
   // Render active tracks
   int n = tracklets->numberOfTracklets();
@@ -65,6 +77,10 @@ Tracklets::Tracklets(kt::Tracklets *tracklets, int frame) :
   }
 
   addChild(csg);
+}
+
+void Tracklets::Render(bool render) {
+  setNodeMask(render);
 }
 
 }  // namespace nodes

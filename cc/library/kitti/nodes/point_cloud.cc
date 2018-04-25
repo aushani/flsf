@@ -7,10 +7,29 @@ namespace library {
 namespace kitti {
 namespace nodes {
 
+PointCloud::PointCloud() :
+ osg::Geometry(),
+ vertices_(new osg::Vec3Array),
+ colors_(new osg::Vec4Array) {
+
+}
+
 PointCloud::PointCloud(const VelodyneScan &scan) :
  osg::Geometry(),
  vertices_(new osg::Vec3Array),
  colors_(new osg::Vec4Array) {
+  Update(scan);
+}
+
+void PointCloud::Update(const VelodyneScan &scan) {
+  // Remove previous sets
+  while (getNumPrimitiveSets() > 0) {
+    removePrimitiveSet(0, getNumPrimitiveSets());
+  }
+
+  // Clear arrays
+  vertices_->resizeArray(0);
+  colors_->resizeArray(0);
 
   for (const auto &hit : scan.GetHits()) {
     vertices_->push_back(osg::Vec3(hit.x(), hit.y(), hit.z()));
@@ -38,6 +57,10 @@ PointCloud::PointCloud(const VelodyneScan &scan) :
   osg::ref_ptr<osg::StateSet> state = getOrCreateStateSet();
   state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
   state->setAttribute(new osg::Point(1), osg::StateAttribute::ON);
+}
+
+void PointCloud::Render(bool render) {
+  setNodeMask(render);
 }
 
 } // nodes

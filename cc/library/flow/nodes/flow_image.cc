@@ -9,7 +9,21 @@ namespace library {
 namespace flow {
 namespace nodes {
 
-FlowImage::FlowImage(const fl::FlowImage &fi) : osg::Group() {
+FlowImage::FlowImage() :
+ osg::Group() {
+}
+
+FlowImage::FlowImage(const fl::FlowImage &fi) :
+ osg::Group() {
+  Update(fi);
+}
+
+void FlowImage::Update(const fl::FlowImage &fi) {
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
   float z = 0;
   osg::Vec4 color(0, 0, 0, 0);
 
@@ -53,6 +67,10 @@ FlowImage::FlowImage(const fl::FlowImage &fi) : osg::Group() {
       addChild(geometry);
     }
   }
+}
+
+void FlowImage::Render(bool render) {
+  setNodeMask(render);
 }
 
 }  // namespace nodes

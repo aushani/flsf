@@ -3,10 +3,8 @@
 #include <thread>
 
 #include <boost/filesystem.hpp>
-#include <boost/optional.hpp>
 
 #include "library/flow/flow_processor.h"
-#include "library/flow/nodes/distance_map.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/pose.h"
@@ -15,6 +13,7 @@
 
 #include "app/flow/command.h"
 #include "app/flow/command_queue.h"
+#include "app/flow/node_manager.h"
 
 namespace fs = boost::filesystem;
 namespace rt = library::ray_tracing;
@@ -50,12 +49,7 @@ class App {
 
   fl::FlowProcessor flow_processor_;
 
-  fs::path car_path_;
-
-  std::shared_ptr<vw::Viewer> viewer_;
-  int view_mode_ = 1;
-
-  boost::optional<osg::ref_ptr<fl::nodes::DistanceMap> > prev_dm_;
+  NodeManager node_manager_;
 
   CommandQueue command_queue_;
   std::thread command_thread_;
@@ -66,7 +60,6 @@ class App {
   void LoadPoses(const fs::path &tsf_dir, const std::string &date, int log_num);
 
   void ProcessFrame(int frame_num);
-  void UpdateViewer();
 
   void ProcessCommands();
 
