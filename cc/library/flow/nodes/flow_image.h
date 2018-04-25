@@ -14,7 +14,7 @@ namespace nodes {
 
 class FlowImage : public osg::Group {
  public:
-  FlowImage(const fl::FlowImage &fi, float res);
+  FlowImage(const fl::FlowImage &fi);
 };
 
 } // nodes

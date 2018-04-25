@@ -20,6 +20,9 @@ namespace flow {
 
 App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
  flow_processor_("/home/aushani/koopa_training/") {
+  // Path for car model
+  car_path_ = tsf_dir / "osg_models" / "lexus" / "lexus_hs.obj";
+
   // Load data
   LoadVelodyneData(tsf_dir, date, log_num);
   LoadTrackletData(tsf_dir, date, log_num);
@@ -122,27 +125,9 @@ void App::ProcessFrame(int frame_num) {
 
   if (viewer_) {
     printf("Update viewer\n");
+    prev_dm_ = boost::none;
 
-    rt::OccGrid og = flow_processor_.GetLastOccGrid1();
-    fl::FlowImage fi = flow_processor_.GetFlowImage();
-    fl::ClassificationMap cm = flow_processor_.GetClassificationMap();
-
-    osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
-    osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets_, frame_num);
-    osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og, cm);
-    osg::ref_ptr<fl::nodes::FlowImage> fin = new fl::nodes::FlowImage(fi, og.GetResolution());
-    osg::ref_ptr<fl::nodes::ClassificationMap> cmn = new fl::nodes::ClassificationMap(cm);
-    //osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
-
-    viewer_->RemoveAllChildren();
-
-    //viewer_->AddChild(pc);
-    viewer_->AddChild(tn);
-    viewer_->AddChild(ogn);
-    viewer_->AddChild(fin);
-    //viewer_->AddChild(cmn);
-    //viewer_->AddChild(car_node);
-
+    UpdateViewer();
     printf("Done\n");
   }
 }
@@ -169,12 +154,61 @@ void App::HandleClick(const Command &command) {
   prev_dm_ = dmn;
 }
 
+void App::HandleViewMode(const Command &command) {
+  view_mode_ = command.GetViewMode();
+  UpdateViewer();
+}
+
+void App::UpdateViewer() {
+  kt::VelodyneScan scan = scans_[scan_at_];
+
+  rt::OccGrid og1 = flow_processor_.GetLastOccGrid1();
+  rt::OccGrid og2 = flow_processor_.GetLastOccGrid2();
+
+  fl::FlowImage fi = flow_processor_.GetFlowImage();
+  fl::ClassificationMap cm = flow_processor_.GetClassificationMap();
+
+  osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
+  osg::ref_ptr<kt::nodes::Tracklets> tn1 = new kt::nodes::Tracklets(&tracklets_, scan_at_-1);
+  osg::ref_ptr<kt::nodes::Tracklets> tn2 = new kt::nodes::Tracklets(&tracklets_, scan_at_);
+  osg::ref_ptr<rt::nodes::OccGrid> og1n = new rt::nodes::OccGrid(og1);
+  osg::ref_ptr<rt::nodes::OccGrid> og2n = new rt::nodes::OccGrid(og2, cm);
+  osg::ref_ptr<fl::nodes::FlowImage> fin = new fl::nodes::FlowImage(fi);
+  osg::ref_ptr<fl::nodes::ClassificationMap> cmn = new fl::nodes::ClassificationMap(cm);
+  osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path_);
+
+  viewer_->RemoveAllChildren();
+
+  if (view_mode_ == 1) {
+    viewer_->AddChild(og1n);
+    viewer_->AddChild(tn1);
+    viewer_->AddChild(fin);
+    viewer_->AddChild(car_node);
+  } else if (view_mode_ == 2) {
+    viewer_->AddChild(og2n);
+    viewer_->AddChild(tn2);
+    viewer_->AddChild(fin);
+    viewer_->AddChild(car_node);
+  } else if (view_mode_ == 3) {
+    viewer_->AddChild(pc);
+    viewer_->AddChild(cmn);
+  }
+
+  if (prev_dm_) {
+    viewer_->AddChild(*prev_dm_);
+  }
+}
+
 void App::ProcessCommands() {
   while (running_) {
     const Command c = command_queue_.Pop(10);
 
     if (c.GetCommandType() == Type::NEXT) {
       ProcessNext();
+    }
+
+    if (c.GetCommandType() == Type::VIEW_MODE) {
+      HandleViewMode(c);
     }
 
     if (c.GetCommandType() == Type::CLICK_AT) {

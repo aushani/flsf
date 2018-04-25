@@ -29,18 +29,18 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   }
 
   // Find p_background
-  //float denom = 0.0;
-  //for (int k=0; k<classification.GetDim(2); k++) {
-  //  denom += exp(classification(i, j, k));
-  //}
-  //float p_background = exp(classification(i, j, 3))/denom;
+  float denom = 0.0;
+  for (int k=0; k<classification.GetDim(2); k++) {
+    denom += exp(classification(i, j, k));
+  }
+  float p_background = exp(classification(i, j, 3))/denom;
 
-  //if (p_background > 0.5) {
-  //  res(i, j, 0) = 0;
-  //  res(i, j, 1) = 0;
+  if (p_background > 0.9) {
+    res(i, j, 0) = 0;
+    res(i, j, 1) = 0;
 
-  //  return;
-  //}
+    return;
+  }
 
 
   // Find best distance
@@ -73,7 +73,8 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
 
 FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
                               const gu::GpuData<3, float> &classification,
-                              gu::GpuData<3, int> *res) const {
+                              gu::GpuData<3, int> *res,
+                              float resolution) const {
   library::timer::Timer timer;
 
   BOOST_ASSERT(res->GetDim(0) == dist_sq.GetDim(0));
@@ -102,7 +103,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
 
   // Copy from device
   gu::HostData<3, int> h_res = *res;
-  FlowImage fi(h_res.GetDim(0), h_res.GetDim(1));
+  FlowImage fi(h_res.GetDim(0), h_res.GetDim(1), resolution);
 
   for (int i=0; i<h_res.GetDim(0); i++) {
     for (int j=0; j<h_res.GetDim(1); j++) {

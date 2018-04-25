@@ -9,17 +9,17 @@ namespace library {
 namespace flow {
 namespace nodes {
 
-FlowImage::FlowImage(const fl::FlowImage &fi, float res) : osg::Group() {
+FlowImage::FlowImage(const fl::FlowImage &fi) : osg::Group() {
   float z = 0;
   osg::Vec4 color(0, 0, 0, 0);
 
   for (int i=fi.MinX(); i<=fi.MaxX(); i++) {
     for (int j=fi.MinY(); j<=fi.MaxY(); j++) {
-      float fx = res * fi.GetXFlow(i, j);
-      float fy = res * fi.GetYFlow(i, j);
+      float fx = fi.GetResolution() * fi.GetXFlow(i, j);
+      float fy = fi.GetResolution() * fi.GetYFlow(i, j);
 
-      float x = i * res;
-      float y = j * res;
+      float x = i * fi.GetResolution();
+      float y = j * fi.GetResolution();
 
       osg::Vec3 sp(x, y, z);
       osg::Vec3 ep(x+fx, y+fy, z);

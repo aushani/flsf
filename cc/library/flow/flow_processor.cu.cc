@@ -20,6 +20,7 @@ namespace flow {
 
 struct DeviceData {
   DeviceData(int max_obs, float res, float max_range, const fs::path &data_path) :
+   resolution(res),
    og_builder(max_obs, res, max_range),
    network(tf::Network::LoadNetwork(data_path)),
    distance_computer(),
@@ -31,6 +32,8 @@ struct DeviceData {
    distance_map(167, 167, 31, res) {     // XXX magic numbers
     last_encoding.SetCoalesceDim(0);
   };
+
+  float resolution;
 
   rt::OccGridBuilder og_builder;
   tf::Network        network;
@@ -95,7 +98,8 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   data_->distance_computer.ComputeDistance(data_->last_encoding, encoding, &data_->distance);
 
   // Compute flow
-  auto fi = data_->solver.ComputeFlow(data_->distance, classification, &data_->raw_flow);
+  auto fi = data_->solver.ComputeFlow(data_->distance, classification,
+                                      &data_->raw_flow, data_->resolution);
 
   // Update cached state
   data_->last_og1 = data_->last_og2;

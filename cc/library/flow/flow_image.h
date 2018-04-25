@@ -8,7 +8,7 @@ namespace flow {
 
 class FlowImage {
  public:
-  FlowImage(int nx, int ny);
+  FlowImage(int nx, int ny, float res);
 
   void SetFlow(int i, int j, int xf, int yf);
 
@@ -18,12 +18,16 @@ class FlowImage {
   int MaxY() const;
   bool InRange(int i, int j) const;
 
+  float GetResolution() const;
+
   int GetXFlow(int i, int j) const;
   int GetYFlow(int i, int j) const;
 
  private:
   size_t size_x_;
   size_t size_y_;
+
+  float resolution_;
 
   std::vector<int> x_flow_;
   std::vector<int> y_flow_;

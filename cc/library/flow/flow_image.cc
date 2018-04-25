@@ -5,9 +5,10 @@
 namespace library {
 namespace flow {
 
-FlowImage::FlowImage(int nx, int ny) :
+FlowImage::FlowImage(int nx, int ny, float res) :
  size_x_(nx),
  size_y_(ny),
+ resolution_(res),
  x_flow_(nx*ny, 0),
  y_flow_(nx*ny, 0) {
 }
@@ -40,6 +41,10 @@ bool FlowImage::InRange(int i, int j) const {
   bool valid_y = j >= MinY() && j <= MaxY();
 
   return valid_x && valid_y;
+}
+
+float FlowImage::GetResolution() const {
+  return resolution_;
 }
 
 void FlowImage::SetFlow(int i, int j, int xf, int yf) {

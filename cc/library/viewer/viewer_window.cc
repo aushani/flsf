@@ -44,8 +44,8 @@ void ViewerWindow::Init(osg::ArgumentParser *args) {
   osg::ref_ptr<osgGA::KeySwitchMatrixManipulator> ksm = new osgGA::KeySwitchMatrixManipulator();
 
   ksm->addMatrixManipulator('1', "TerrainTrackpad", new TerrainTrackpadManipulator());
-  ksm->addMatrixManipulator('2', "NodeTracker", new osgGA::NodeTrackerManipulator());
-  ksm->addMatrixManipulator('3', "Terrain", new osgGA::TerrainManipulator());
+  //ksm->addMatrixManipulator('2', "NodeTracker", new osgGA::NodeTrackerManipulator());
+  //ksm->addMatrixManipulator('3', "Terrain", new osgGA::TerrainManipulator());
 
   // set initial camera position (for all manipulators)
   // TODO: magic numbers
@@ -55,30 +55,30 @@ void ViewerWindow::Init(osg::ArgumentParser *args) {
   view->setCameraManipulator(ksm.get());
 
   // add the state manipulator
-  osg::ref_ptr<osgGA::StateSetManipulator> ssm =
-      new osgGA::StateSetManipulator(view->getCamera()->getOrCreateStateSet());
-  ssm->getUsage(*au);
-  view->addEventHandler(ssm);
+  //osg::ref_ptr<osgGA::StateSetManipulator> ssm =
+  //    new osgGA::StateSetManipulator(view->getCamera()->getOrCreateStateSet());
+  //ssm->getUsage(*au);
+  //view->addEventHandler(ssm);
 
   // add the stats handler
-  osg::ref_ptr<osgViewer::StatsHandler> sh = new osgViewer::StatsHandler();
-  sh->getUsage(*au);
-  view->addEventHandler(sh);
+  //osg::ref_ptr<osgViewer::StatsHandler> sh = new osgViewer::StatsHandler();
+  //sh->getUsage(*au);
+  //view->addEventHandler(sh);
 
   // add the help handler
-  osg::ref_ptr<osgViewer::HelpHandler> hh = new osgViewer::HelpHandler(au);
-  hh->getUsage(*au);
-  view->addEventHandler(hh);
+  //osg::ref_ptr<osgViewer::HelpHandler> hh = new osgViewer::HelpHandler(au);
+  //hh->getUsage(*au);
+  //view->addEventHandler(hh);
 
   // add the screen capture handler
-  osg::ref_ptr<osgViewer::ScreenCaptureHandler> sch = new osgViewer::ScreenCaptureHandler();
-  sch->getUsage(*au);
-  view->addEventHandler(sch);
+  //osg::ref_ptr<osgViewer::ScreenCaptureHandler> sch = new osgViewer::ScreenCaptureHandler();
+  //sch->getUsage(*au);
+  //view->addEventHandler(sch);
 
   // add the level of detail scale selector
-  osg::ref_ptr<osgViewer::LODScaleHandler> lod = new osgViewer::LODScaleHandler();
-  lod->getUsage(*au);
-  view->addEventHandler(lod);
+  //osg::ref_ptr<osgViewer::LODScaleHandler> lod = new osgViewer::LODScaleHandler();
+  //lod->getUsage(*au);
+  //view->addEventHandler(lod);
 
   // rotate by x until z down
   // car RH coordinate frame has x forward, z down

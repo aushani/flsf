@@ -34,7 +34,6 @@ class App {
 
   App operator=(const App &app);
 
-
   void SetViewer(const std::shared_ptr<vw::Viewer> &viewer);
 
   void ProcessNext();
@@ -51,7 +50,10 @@ class App {
 
   fl::FlowProcessor flow_processor_;
 
+  fs::path car_path_;
+
   std::shared_ptr<vw::Viewer> viewer_;
+  int view_mode_ = 1;
 
   boost::optional<osg::ref_ptr<fl::nodes::DistanceMap> > prev_dm_;
 
@@ -64,10 +66,12 @@ class App {
   void LoadPoses(const fs::path &tsf_dir, const std::string &date, int log_num);
 
   void ProcessFrame(int frame_num);
+  void UpdateViewer();
 
   void ProcessCommands();
 
   void HandleClick(const Command &command);
+  void HandleViewMode(const Command &command);
 };
 
 } // flow
