@@ -115,7 +115,11 @@ void NodeManager::UpdateViewer() {
 }
 
 void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan1, const kt::VelodyneScan &scan2, kt::Tracklets *tracklets, int frame_num) {
-  // TODO Make sure we have a valid viewer
+  // Make sure we have a valid viewer
+  if (!viewer_) {
+    return;
+  }
+
   viewer_->Lock();
 
   library::timer::Timer t;
