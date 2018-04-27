@@ -6,6 +6,7 @@ qt4_cc_library(
     hdr = "viewer_window.h",
     normal_hdrs = [
                     "pick_handler.h",
+                    "mouse_handler.h",
                     "viewer_widget.h",
                     "terrain_trackpad_manipulator.h",
                   ],
@@ -25,6 +26,7 @@ cc_library (
     name = "viewer",
     srcs = [
             "pick_handler.cc", "pick_handler.h",
+            "mouse_handler.cc", "mouse_handler.h",
             "key_handler.cc", "key_handler.h",
             "terrain_trackpad_manipulator.cc", "terrain_trackpad_manipulator.h",
             "viewer.cc", "viewer.h",
