@@ -10,7 +10,8 @@
 namespace app {
 namespace flow {
 
-App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
+App::App(const fs::path &tsf_dir, const std::string &date, int log_num, int frame_num) :
+ scan_at_(frame_num),
  flow_processor_("/home/aushani/koopa_training/"),
  node_manager_(tsf_dir / "osg_models" / "lexus" / "lexus_hs.obj") {
   // Load data
@@ -20,7 +21,7 @@ App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
   printf("Done loading data\n");
 
   // Initialize flow processor with first scan
-  flow_processor_.Initialize(scans_[0]);
+  flow_processor_.Initialize(scans_[scan_at_]);
   printf("Initalized Flow Processor\n");
 
   // Start command processing thread
@@ -115,7 +116,7 @@ void App::ProcessFrame(int frame_num) {
 
   // Update node manager
   printf("Update node manager...\n");
-  node_manager_.Update(flow_processor_, scan, &tracklets_, frame_num);
+  node_manager_.Update(flow_processor_, scans_[frame_num-1], scans_[frame_num], &tracklets_, frame_num);
   printf("Done\n");
 }
 

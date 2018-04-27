@@ -7,18 +7,18 @@
 #include <osgGA/GUIEventHandler>
 #include <osgViewer/CompositeViewer>
 
-#include "library/viewer/pick_handler.h"
+#include "library/viewer/mouse_handler.h"
 
 #include "app/flow/app.h"
 
 namespace app {
 namespace flow {
 
-class MouseHandler : public library::viewer::PickHandler {
+class MouseHandler : public library::viewer::MouseHandler {
  public:
   MouseHandler(const std::shared_ptr<App> &app);
 
-  void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+  void HandleClick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
 
  private:
   std::shared_ptr<App> app_;

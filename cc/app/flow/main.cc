@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
   au->addCommandLineOption("--tsf-data-dir <dirname>", "TSF data directory", "~/data/tsf_data/");
   au->addCommandLineOption("--kitti-log-date <dirname>", "KITTI date", "2011_09_26");
   au->addCommandLineOption("--log-num <num>", "KITTI log number", "18");
+  au->addCommandLineOption("--frame-num <num>", "Starting frame number", "0");
 
   // handle help text
   // call AFTER init viewer so key bindings have been set
@@ -52,7 +53,12 @@ int main(int argc, char** argv) {
     printf("Using default KITTI log number: %d\n", log_num);
   }
 
-  auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, log_num);
+  int frame_num = 0;
+  if (args.read("--frame-num", frame_num)) {
+    printf("Starting from frame %d\n", frame_num);
+  }
+
+  auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, log_num, frame_num);
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
   osg::ref_ptr<app::flow::KeyHandler>   key_handler(new app::flow::KeyHandler(app));

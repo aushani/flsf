@@ -6,7 +6,8 @@ namespace app {
 namespace flow {
 
 NodeManager::NodeManager(const fs::path &car_path) :
- pc_(new ktn::PointCloud()),
+ pc1_(new ktn::PointCloud()),
+ pc2_(new ktn::PointCloud()),
  tn1_(new ktn::Tracklets()),
  tn2_(new ktn::Tracklets()),
  og1n_(new rtn::OccGrid()),
@@ -18,7 +19,8 @@ NodeManager::NodeManager(const fs::path &car_path) :
 }
 
 void NodeManager::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
-  viewer->AddChild(pc_);
+  viewer->AddChild(pc1_);
+  viewer->AddChild(pc2_);
   viewer->AddChild(tn1_);
   viewer->AddChild(tn2_);
   viewer->AddChild(og1n_);
@@ -40,7 +42,8 @@ void NodeManager::SetViewMode(int view_mode) {
 
 void NodeManager::UpdateViewer() {
   if (view_mode_ == 1) {
-    pc_->Render(false);
+    pc1_->Render(false);
+    pc2_->Render(false);
 
     tn1_->Render(true);
     tn2_->Render(false);
@@ -53,7 +56,8 @@ void NodeManager::UpdateViewer() {
 
     //car_node_->Render(true);
   } else if (view_mode_ == 2) {
-    pc_->Render(false);
+    pc1_->Render(false);
+    pc2_->Render(false);
 
     tn1_->Render(false);
     tn2_->Render(true);
@@ -66,7 +70,8 @@ void NodeManager::UpdateViewer() {
 
     //car_node_->Render(true);
   } else if (view_mode_ == 3) {
-    pc_->Render(true);
+    pc1_->Render(false);
+    pc2_->Render(false);
 
     tn1_->Render(false);
     tn2_->Render(false);
@@ -78,10 +83,38 @@ void NodeManager::UpdateViewer() {
     cmn_->Render(true);
 
     //car_node_->Render(true);
+  } else if (view_mode_ == 4) {
+    pc1_->Render(true);
+    pc2_->Render(false);
+
+    tn1_->Render(false);
+    tn2_->Render(false);
+
+    og1n_->Render(false);
+    og2n_->Render(false);
+
+    fin_->Render(false);
+    cmn_->Render(false);
+
+    //car_node_->Render(true);
+  } else if (view_mode_ == 5) {
+    pc1_->Render(false);
+    pc2_->Render(true);
+
+    tn1_->Render(false);
+    tn2_->Render(false);
+
+    og1n_->Render(false);
+    og2n_->Render(false);
+
+    fin_->Render(false);
+    cmn_->Render(false);
+
+    //car_node_->Render(true);
   }
 }
 
-void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan, kt::Tracklets *tracklets, int frame_num) {
+void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan1, const kt::VelodyneScan &scan2, kt::Tracklets *tracklets, int frame_num) {
   // TODO Make sure we have a valid viewer
   viewer_->Lock();
 
@@ -90,7 +123,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   dmn_->Render(false);
 
   t.Start();
-  pc_->Update(scan);
+  pc1_->Update(scan1);
+  pc2_->Update(scan2);
   printf("point cloud took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
