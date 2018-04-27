@@ -126,5 +126,9 @@ void NodeManager::ShowDistanceMap(const fl::FlowProcessor &fp, double x, double 
   dmn_->Render(true);
 }
 
+void NodeManager::ClearDistanceMap() {
+  dmn_->Render(false);
+}
+
 } // flow
 } // app

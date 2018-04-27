@@ -65,6 +65,7 @@ class App {
 
   void HandleClick(const Command &command);
   void HandleViewMode(const Command &command);
+  void HandleClearDistanceMap(const Command &command);
 };
 
 } // flow

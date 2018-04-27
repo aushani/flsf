@@ -35,6 +35,7 @@ class NodeManager {
 
   void Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan, kt::Tracklets *tracklets, int frame_num);
   void ShowDistanceMap(const fl::FlowProcessor &fp, double x, double y);
+  void ClearDistanceMap();
 
   void SetViewMode(int view_mode);
 

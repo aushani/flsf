@@ -5,6 +5,7 @@ namespace flow {
 
 enum Type {
   NONE,
+  CLEAR_DM,
   NEXT,
   VIEW_MODE,
   CLICK_AT,

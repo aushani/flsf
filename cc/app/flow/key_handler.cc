@@ -15,6 +15,12 @@ bool KeyHandler::KeyPress(const osgGA::GUIEventAdapter& ea) {
   //printf("Got key: %c (0x%X, 0x%X) with mask 0x%X\n", key, ea.getKey(), ea.getUnmodifiedKey(), ea.getModKeyMask());
 
   if (!ctrl) {
+    if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_C) {
+      Command command(Type::CLEAR_DM);
+      app_->QueueCommand(command);
+      return true;
+    }
+
     if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_N) {
       Command command(Type::NEXT);
       app_->QueueCommand(command);

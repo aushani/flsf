@@ -132,6 +132,10 @@ void App::HandleClick(const Command &command) {
   node_manager_.ShowDistanceMap(flow_processor_, command.GetClickX(), command.GetClickY());
 }
 
+void App::HandleClearDistanceMap(const Command &command) {
+  node_manager_.ClearDistanceMap();
+}
+
 void App::HandleViewMode(const Command &command) {
   int view_mode = command.GetViewMode();
   node_manager_.SetViewMode(view_mode);
@@ -140,6 +144,10 @@ void App::HandleViewMode(const Command &command) {
 void App::ProcessCommands() {
   while (running_) {
     const Command c = command_queue_.Pop(10);
+
+    if (c.GetCommandType() == Type::CLEAR_DM) {
+      HandleClearDistanceMap(c);
+    }
 
     if (c.GetCommandType() == Type::NEXT) {
       ProcessNext();
