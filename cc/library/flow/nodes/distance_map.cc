@@ -65,7 +65,7 @@ void DistanceMap::Update(const fl::DistanceMap &dm, float x, float y) {
   map_image->addChild(geode);
 
   // Mark origin
-  osg::Vec3 pos(x, y, 0.0);
+  osg::Vec3 pos(i0*res, j0*res, 0.0);
   osg::ref_ptr<osg::Box> box = new osg::Box(pos, res, res, 2.0);
 
   osg::ref_ptr<osg::ShapeDrawable> shape = new osg::ShapeDrawable(box);
