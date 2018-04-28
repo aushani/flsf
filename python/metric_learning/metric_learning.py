@@ -221,10 +221,22 @@ class MetricLearning:
 
     def make_metric_plot(self, dataset, save=None, show=False):
         distances = self.eval_dist(dataset.occ1, dataset.occ2)
+        probs = self.eval_filter_prob(dataset.occ1)
 
         plt.clf()
 
-        self.make_pr_curve(dataset.match, -distances, 'Metric Learning')
+        for cutoff in [0.2, 0.4, 0.6, 0.8]:
+            idx = probs[:, 0] > cutoff
+
+            if np.sum(idx) == 0:
+                continue
+
+            dists_c = distances[idx]
+            match_c = dataset.match[idx]
+
+            self.make_pr_curve(match_c, -dists_c, 'Cutoff = %5.3f' % cutoff)
+
+        self.make_pr_curve(dataset.match, -distances, 'All')
 
         if save:
             plt.savefig(save)
