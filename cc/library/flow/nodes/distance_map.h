@@ -16,7 +16,12 @@ namespace nodes {
 
 class DistanceMap : public osg::Group {
  public:
+  DistanceMap();
   DistanceMap(const fl::DistanceMap &dm, float x, float y);
+
+  void Update(const fl::DistanceMap &dm, float x, float y);
+
+  void Render(bool render);
 
  private:
   osg::ref_ptr<osg::Image> GetImage(const fl::DistanceMap &cm, int i0, int j0);

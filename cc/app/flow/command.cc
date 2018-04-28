@@ -16,6 +16,12 @@ void Command::SetClickPosition(double x, double y) {
   click_pos_[1] = y;
 }
 
+void Command::SetViewMode(int view_mode) {
+  BOOST_ASSERT(type_ == Type::VIEW_MODE);
+
+  view_mode_ = view_mode;
+}
+
 Type Command::GetCommandType() const {
   return type_;
 }
@@ -30,6 +36,12 @@ double Command::GetClickY() const {
   BOOST_ASSERT(type_ == CLICK_AT);
 
   return click_pos_[1];
+}
+
+int Command::GetViewMode() const {
+  BOOST_ASSERT(type_ == Type::VIEW_MODE);
+
+  return view_mode_;
 }
 
 } // namespace flow

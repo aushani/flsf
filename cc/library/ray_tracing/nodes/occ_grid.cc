@@ -16,7 +16,24 @@ namespace library {
 namespace ray_tracing {
 namespace nodes {
 
+OccGrid::OccGrid() :
+ osg::Group() {
+}
+
 OccGrid::OccGrid(const rt::OccGrid &og, double thresh_lo) : osg::Group() {
+  Update(og, thresh_lo);
+}
+
+OccGrid::OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo) : osg::Group() {
+  Update(og, cm, thresh_lo);
+}
+
+void OccGrid::Update(const rt::OccGrid &og, double thresh_lo) {
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
   double scale = og.GetResolution() * 0.75;
 
   // Iterate over occ grid and add occupied cells
@@ -49,7 +66,12 @@ OccGrid::OccGrid(const rt::OccGrid &og, double thresh_lo) : osg::Group() {
   }
 }
 
-OccGrid::OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo) : osg::Group() {
+void OccGrid::Update(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo) {
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
   double scale = og.GetResolution() * 0.75;
 
   // Iterate over occ grid and add occupied cells
@@ -75,7 +97,7 @@ OccGrid::OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double 
     }
 
     double r = 0.3;
-    double g = 0.3;
+    double g = 0.0;
     double b = 0.3;
 
     if (cm.InRange(loc.i, loc.j)) {
@@ -89,6 +111,10 @@ OccGrid::OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double 
     osg::ref_ptr<osgn::ColorfulBox> box = new osgn::ColorfulBox(color, pos, scale);
     addChild(box);
   }
+}
+
+void OccGrid::Render(bool render) {
+  setNodeMask(render);
 }
 
 }  // namespace nodes

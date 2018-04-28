@@ -5,7 +5,9 @@ namespace flow {
 
 enum Type {
   NONE,
+  CLEAR_DM,
   NEXT,
+  VIEW_MODE,
   CLICK_AT,
 };
 
@@ -14,16 +16,21 @@ class Command {
   Command(const Type &type);
 
   void SetClickPosition(double x, double y);
+  void SetViewMode(int view_mode);
 
   Type GetCommandType() const;
 
   double GetClickX() const;
   double GetClickY() const;
 
+  int GetViewMode() const;
+
  private:
   Type type_;
 
   double click_pos_[2];
+
+  int view_mode_;
 
 };
 

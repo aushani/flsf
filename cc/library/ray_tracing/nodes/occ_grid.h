@@ -24,8 +24,14 @@ namespace nodes {
 
 class OccGrid : public osg::Group {
  public:
+  OccGrid();
   OccGrid(const rt::OccGrid &og, double thresh_lo=0);
   OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo=0);
+
+  void Update(const rt::OccGrid &og, double thresh_lo = 0);
+  void Update(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo = 0);
+
+  void Render(bool render);
 };
 
 } // nodes

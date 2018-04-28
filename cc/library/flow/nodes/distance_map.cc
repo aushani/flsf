@@ -1,19 +1,34 @@
 #include "library/flow/nodes/distance_map.h"
 
 #include <boost/assert.hpp>
+#include <osg/PolygonMode>
+#include <osg/LineWidth>
+#include <osg/ShapeDrawable>
 
+#include "library/osg_nodes/composite_shape_group.h"
 #include "library/kitti/object_class.h"
 
+namespace osgn = library::osg_nodes;
 namespace kt = library::kitti;
 
 namespace library {
 namespace flow {
 namespace nodes {
 
+DistanceMap::DistanceMap() :
+ osg::Group() {
+}
+
 DistanceMap::DistanceMap(const fl::DistanceMap &dm, float x, float y) :
  osg::Group() {
-  int i0 = std::round(x / dm.GetResolution());
-  int j0 = std::round(y / dm.GetResolution());
+  Update(dm, x, y);
+}
+
+void DistanceMap::Update(const fl::DistanceMap &dm, float x, float y) {
+  float res = dm.GetResolution();
+
+  int i0 = std::round(x / res);
+  int j0 = std::round(y / res);
 
   BOOST_ASSERT(dm.InRange(i0, j0, 0, 0));
 
@@ -35,21 +50,43 @@ DistanceMap::DistanceMap(const fl::DistanceMap &dm, float x, float y) :
   int width = dm.MaxOffset() - dm.MinOffset() + 1;
   int height = width;
 
-  double x0 = i0 + dm.MinOffset();
-  double y0 = j0 + dm.MinOffset();
+  double x0 = i0 + dm.MinOffset() - 0.5;
+  double y0 = j0 + dm.MinOffset() - 0.5;
   SetUpTexture(texture, geode, x0, y0, width, height, 13);
 
   osg::Matrix m = osg::Matrix::identity();
-  m.makeScale(dm.GetResolution(), dm.GetResolution(), dm.GetResolution());
+  m.makeScale(res, res, res);
   //m.postMultTranslate(osg::Vec3d(x0_, y0_, -1.7)); // ground plane
   //m.postMultTranslate(osg::Vec3d(x0, y0, 0)); // ground plane
 
   osg::ref_ptr<osg::MatrixTransform> map_image = new osg::MatrixTransform();
   map_image->setMatrix(m);
 
-  // Ready to add
   map_image->addChild(geode);
+
+  // Mark origin
+  osg::Vec3 pos(x, y, 0.0);
+  osg::ref_ptr<osg::Box> box = new osg::Box(pos, res, res, 2.0);
+
+  osg::ref_ptr<osg::ShapeDrawable> shape = new osg::ShapeDrawable(box);
+
+  osg::ref_ptr<osgn::CompositeShapeGroup> csg = new osgn::CompositeShapeGroup();
+
+  osg::ref_ptr<osg::StateSet> ss = csg->getOrCreateStateSet();
+  osg::ref_ptr<osg::PolygonMode> pm = new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+  osg::ref_ptr<osg::LineWidth> lw = new osg::LineWidth(8.0);
+  ss->setAttributeAndModes(pm, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+  ss->setAttributeAndModes(lw, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+  csg->addChild(shape);
+
+  // Remove old children
+  while (getNumChildren() > 0) {
+    removeChild(0, getNumChildren());
+  }
+
+  // Add new children
   addChild(map_image);
+  addChild(csg);
 }
 
 osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0, int j0) {
@@ -140,6 +177,10 @@ void DistanceMap::SetUpTexture(osg::Texture2D *texture, osg::Geode *geode, doubl
   // Need to make sure this geometry is draw last. RenderBins are handled
   // in numerical order so set bin number to 11 by default
   state_set->setRenderBinDetails( bin_num, "RenderBin");
+}
+
+void DistanceMap::Render(bool render) {
+  setNodeMask(render);
 }
 
 } // namespace nodes

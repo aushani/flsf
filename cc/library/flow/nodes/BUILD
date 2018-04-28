@@ -6,6 +6,7 @@ cc_library(
     deps = [
             "//library/flow",
             "//library/kitti",
+            "//library/osg_nodes",
             "@openscenegraph//:openscenegraph"
            ],
 )

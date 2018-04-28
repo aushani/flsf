@@ -13,7 +13,12 @@ namespace nodes {
 
 class PointCloud : public osg::Geometry {
  public:
+  PointCloud();
   PointCloud(const VelodyneScan &scan);
+
+  void Update(const VelodyneScan &scan);
+
+  void Render(bool render);
 
  private:
   //static constexpr double kColorMapZMin = -2.5;
