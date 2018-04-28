@@ -8,7 +8,7 @@ n_classes = len(idx_to_classes)
 
 class Sample:
 
-    def __init__(self, data):
+    def __init__(self, data, rotate=0, flip=False):
         self.width = 7
         self.length = 7
         self.height = 12
@@ -16,15 +16,26 @@ class Sample:
         self.occ1 = data['occ1'].reshape((self.width, self.length, self.height))
         self.occ2 = data['occ2'].reshape((self.width, self.length, self.height))
 
+        # Data augmentation
+        self.occ1 = np.rot90(self.occ1, k=rotate);
+        self.occ2 = np.rot90(self.occ2, k=rotate);
+
+        if flip:
+            self.occ1 = self.occ1.transpose(1, 0, 2)
+            self.occ2 = self.occ2.transpose(1, 0, 2)
+
         # Rescale range from 0-1 to -0.5 - +0.5
         self.occ1 -= 0.5
         self.occ2 -= 0.5
-
 
         self.feature_vector = self.get_icra2017_feature_vector()
 
         self.label1 = data['label1']
         self.match = data['match']
+
+        self.filter = 0
+        if self.label1 == 3:
+            self.filter = 1
 
     def get_icra2017_feature_vector(self):
         feature_vector = np.zeros((3*self.height,))
@@ -61,6 +72,7 @@ class SampleSet:
         self.match = np.zeros((n,))
 
         self.label1 = np.zeros((n,))
+        self.filter = np.zeros((n,))
 
         self.feature_vector = np.zeros((n, samples[0].feature_vector.shape[0]))
 
@@ -72,6 +84,8 @@ class SampleSet:
 
             self.label1[i] = sample.label1
             self.match[i] = sample.match
+
+            self.filter[i] = sample.filter
 
             self.feature_vector[i, :] = sample.feature_vector
 

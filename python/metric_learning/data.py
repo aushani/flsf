@@ -84,18 +84,18 @@ class DataManager:
         self.reserved = [False,] * self.num_samples
 
     def make_validation(self, n = 1000):
-        self.validation_set = self.get_next_samples(n, reserve=True)
+        self.validation_set = self.get_next_samples(n, reserve=True, augment = False)
 
-    def get_next_samples(self, n, reserve = False):
+    def get_next_samples(self, n, reserve = False, augment = True):
         samples = []
 
         for i in range(n):
-            samples.append(self.get_next_sample(reserve=reserve))
+            samples.append(self.get_next_sample(reserve=reserve, augment=augment))
 
         return SampleSet(samples)
 
-    def get_next_sample(self, reserve = False):
-        res = self.get_sample(idx = self.idxs[self.idx_at])
+    def get_next_sample(self, reserve = False, augment = True):
+        res = self.get_sample(idx = self.idxs[self.idx_at], augment = augment)
 
         if reserve:
             self.reserved[self.idx_at] = True
@@ -107,7 +107,7 @@ class DataManager:
 
         return res
 
-    def get_sample(self, idx=0):
+    def get_sample(self, idx=0, augment = False):
         dt = np.dtype([  ('occ1', (np.float32, self.size_occ)),
                          ('occ2', (np.float32, self.size_occ)),
                          ('label1', (np.int32, self.size_label)),
@@ -130,7 +130,13 @@ class DataManager:
 
         x = np.fromfile(self.f_ptrs[fn_idx], dtype=dt, count=1)
 
-        return Sample(x)
+        if augment:
+            rotate = np.random.randint(0, 4)
+            flip = np.random.randint(0, 2) == 0
+
+            return Sample(x, rotate=rotate, flip=flip)
+        else:
+            return Sample(x)
 
 if __name__ == '__main__':
     d = DataManager()
