@@ -29,6 +29,11 @@ void FlowImage::Update(const fl::FlowImage &fi) {
 
   for (int i=fi.MinX(); i<=fi.MaxX(); i++) {
     for (int j=fi.MinY(); j<=fi.MaxY(); j++) {
+      // Check for valid flow
+      if (!fi.GetFlowValid(i, j)) {
+        continue;
+      }
+
       float fx = fi.GetResolution() * fi.GetXFlow(i, j);
       float fy = fi.GetResolution() * fi.GetYFlow(i, j);
 
@@ -36,7 +41,7 @@ void FlowImage::Update(const fl::FlowImage &fi) {
       float y = j * fi.GetResolution();
 
       osg::Vec3 sp(x, y, z);
-      osg::Vec3 ep(x+fx, y+fy, z);
+      osg::Vec3 ep(x+fx*0.95, y+fy*0.95, z);
 
       osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
 

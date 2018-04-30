@@ -24,10 +24,9 @@ struct DeviceData {
    og_builder(max_obs, res, max_range),
    network(tf::Network::LoadNetwork(data_path)),
    distance_computer(),
-   solver(),
+   solver(167, 167, 31),                  // XXX magic numbers
    last_encoding(167, 167, 25),          // XXX magic numbers
    distance(167, 167, 31, 31),           // XXX magic numbers
-   raw_flow(167, 167, 2),                // XXX magic numbers
    classification_map(167, 167, res),    // XXX magic numbers
    distance_map(167, 167, 31, res) {     // XXX magic numbers
     last_encoding.SetCoalesceDim(0);
@@ -46,7 +45,6 @@ struct DeviceData {
   gu::GpuData<3, float>                     last_encoding;
 
   gu::GpuData<4, float>                     distance;
-  gu::GpuData<3, int>                       raw_flow;
 
   boost::optional<FlowImage>                flow_image;
   ClassificationMap                         classification_map;
@@ -98,8 +96,7 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   data_->distance_computer.ComputeDistance(data_->last_encoding, encoding, &data_->distance);
 
   // Compute flow
-  auto fi = data_->solver.ComputeFlow(data_->distance, classification,
-                                      &data_->raw_flow, data_->resolution);
+  auto fi = data_->solver.ComputeFlow(data_->distance, classification, data_->resolution);
 
   // Update cached state
   data_->last_og1 = data_->last_og2;

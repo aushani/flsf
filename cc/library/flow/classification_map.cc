@@ -75,5 +75,38 @@ float ClassificationMap::GetClassProbability(int i, int j, kt::ObjectClass c) co
   return std::exp(class_score->second) / denom;
 }
 
+float ClassificationMap::GetClassProbabilityXY(float x, float y, kt::ObjectClass c) const {
+  int i = std::round(x / resolution_);
+  int j = std::round(y / resolution_);
+
+  return GetClassProbability(i, j, c);
+}
+
+std::map<kt::ObjectClass, float> ClassificationMap::GetClassProbabilities(int i, int j) const {
+  BOOST_ASSERT(InRange(i, j));
+
+  size_t idx = GetIdx(i, j);
+  const std::map<kt::ObjectClass, float> &map = scores_[idx];
+
+  float denom = 0.0;
+  for (const auto &kv : map) {
+    denom += std::exp(kv.second);
+  }
+
+  std::map<kt::ObjectClass, float> probs;
+  for (const auto &kv : map) {
+    probs[kv.first] += std::exp(kv.second) / denom;
+  }
+
+  return probs;
+}
+
+std::map<kt::ObjectClass, float> ClassificationMap::GetClassProbabilitiesXY(float x, float y) const {
+  int i = std::round(x / resolution_);
+  int j = std::round(y / resolution_);
+
+  return GetClassProbabilities(i, j);
+}
+
 } // flow
 } // library

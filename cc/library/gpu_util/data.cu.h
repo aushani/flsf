@@ -157,26 +157,51 @@ class Data {
     return coalesce_dim_;
   }
 
+  template<class...T2, typename std::enable_if<sizeof...(T2) == N, int>::type = 0>
+  __host__ __device__ bool InRange(const T2... args) const {
+    int vals[] = {args...};
+
+    for (int i=0; i<N; i++) {
+      if (vals[i] >= dims_[i]) {
+        return false;
+      }
+
+      if (vals[i] < 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   template<class...T2, typename std::enable_if<sizeof...(T2) == N && L == DataLocation::ON_HOST, int>::type = 0>
   __host__ inline T& operator()(const T2... args) {
+    BOOST_ASSERT(InRange(args...));
+
     int idx = GetIdx(args...);
     return data_[idx];
   }
 
   template<class...T2, typename std::enable_if<sizeof...(T2) == N && L == DataLocation::ON_HOST, int>::type = 0>
   __host__ inline T operator()(const T2... args) const {
+    BOOST_ASSERT(InRange(args...));
+
     int idx = GetIdx(args...);
     return data_[idx];
   }
 
   template<class...T2, typename std::enable_if<sizeof...(T2) == N && L == DataLocation::ON_DEVICE, int>::type = 0>
   __device__ inline T& operator()(const T2... args) {
+    assert(InRange(args...));
+
     int idx = GetIdx(args...);
     return data_[idx];
   }
 
   template<class...T2, typename std::enable_if<sizeof...(T2) == N && L == DataLocation::ON_DEVICE, int>::type = 0>
   __device__ inline T operator()(const T2... args) const {
+    assert(InRange(args...));
+
     int idx = GetIdx(args...);
     return data_[idx];
   }
@@ -305,18 +330,10 @@ class Data {
         continue;
       }
 
-      // assert valid dim
-      assert(vals[i] < dims_[i]);
-      assert(vals[i] >= 0);
-
       // Compute idx
       idx *= dims_[i];
       idx += vals[i];
     }
-
-    // Now handle coalescing
-    assert(vals[coalesce_dim_] < dims_[coalesce_dim_]);
-    assert(vals[coalesce_dim_] >= 0);
 
     idx *= dims_[coalesce_dim_];
     idx += vals[coalesce_dim_];

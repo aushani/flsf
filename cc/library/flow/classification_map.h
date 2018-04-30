@@ -27,6 +27,10 @@ class ClassificationMap {
   float GetResolution() const;
 
   float GetClassProbability(int i, int j, kt::ObjectClass c) const;
+  float GetClassProbabilityXY(float x, float y, kt::ObjectClass c) const;
+
+  std::map<kt::ObjectClass, float> GetClassProbabilities(int i, int j) const;
+  std::map<kt::ObjectClass, float> GetClassProbabilitiesXY(float x, float y) const;
 
  private:
   size_t size_x_;

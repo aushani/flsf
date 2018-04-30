@@ -130,7 +130,27 @@ void App::QueueCommand(const Command &command) {
 }
 
 void App::HandleClick(const Command &command) {
-  node_manager_.ShowDistanceMap(flow_processor_, command.GetClickX(), command.GetClickY());
+  double x = command.GetClickX();
+  double y = command.GetClickY();
+
+  printf("Click at %f, %f\n", x, y);
+
+  node_manager_.ShowDistanceMap(flow_processor_, x, y);
+
+  // Get classification result
+  const auto &cm = flow_processor_.GetClassificationMap();
+  const auto &probs = cm.GetClassProbabilitiesXY(x, y);
+
+  printf("\n");
+  for (const auto &kv : probs) {
+    printf("%10s:\t %7.3f %%\n", kt::ObjectClassToString(kv.first).c_str(), 100.0 * kv.second);
+  }
+  printf("\n");
+
+  // Get flow result
+  const auto &fi = flow_processor_.GetFlowImage();
+  printf("Flow is %d %d (%s)\n", fi.GetXFlowXY(x, y), fi.GetYFlowXY(x, y),
+                                 fi.GetFlowValid(x, y) ? "valid":"not valid");
 }
 
 void App::HandleClearDistanceMap(const Command &command) {

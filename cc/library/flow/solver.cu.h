@@ -11,12 +11,22 @@ namespace flow {
 
 class Solver {
  public:
-  Solver();
+  Solver(int nx, int ny, int n_window);
 
   FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq,
                         const gu::GpuData<3, float> &classification,
-                        gu::GpuData<3, int> *res,
-                        float resolution) const;
+                        float resolution);
+
+ private:
+  const int           nx_;
+  const int           ny_;
+
+  const int n_window_;
+
+  gu::GpuData<4, float>  energy_;
+  gu::GpuData<2, float>  energy_hat_;
+  gu::GpuData<3, int>    flow_est_;
+  gu::GpuData<2, int>    flow_valid_;
 };
 
 } // namespace tf
