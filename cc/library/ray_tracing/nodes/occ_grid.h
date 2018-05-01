@@ -7,6 +7,7 @@
 
 #include "library/ray_tracing/occ_grid.h"
 #include "library/flow/classification_map.h"
+#include "library/flow/filter_map.h"
 
 namespace rt = library::ray_tracing;
 namespace fl = library::flow;
@@ -27,9 +28,11 @@ class OccGrid : public osg::Group {
   OccGrid();
   OccGrid(const rt::OccGrid &og, double thresh_lo=0);
   OccGrid(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo=0);
+  OccGrid(const rt::OccGrid &og, const fl::FilterMap &fm, double thresh_lo=0);
 
   void Update(const rt::OccGrid &og, double thresh_lo = 0);
   void Update(const rt::OccGrid &og, const fl::ClassificationMap &cm, double thresh_lo = 0);
+  void Update(const rt::OccGrid &og, const fl::FilterMap &fm, double thresh_lo = 0);
 
   void Render(bool render);
 };

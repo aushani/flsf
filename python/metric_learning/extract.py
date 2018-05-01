@@ -51,8 +51,10 @@ var_names = [
 'Encoder/l3/weights',
 'Encoder/latent/biases',
 'Encoder/latent/weights',
-'classifier/biases',
-'classifier/weights',
+#'classifier/biases',
+#'classifier/weights',
+'filter/biases',
+'filter/weights',
 ]
 
 for var_name in var_names:

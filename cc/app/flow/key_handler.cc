@@ -21,8 +21,26 @@ bool KeyHandler::KeyPress(const osgGA::GUIEventAdapter& ea) {
       return true;
     }
 
+    if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_D) {
+      Command command(Type::DECREASE_ITERATIONS);
+      app_->QueueCommand(command);
+      return true;
+    }
+
+    if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_I) {
+      Command command(Type::INCREASE_ITERATIONS);
+      app_->QueueCommand(command);
+      return true;
+    }
+
     if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_N) {
       Command command(Type::NEXT);
+      app_->QueueCommand(command);
+      return true;
+    }
+
+    if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_R) {
+      Command command(Type::REFRESH);
       app_->QueueCommand(command);
       return true;
     }

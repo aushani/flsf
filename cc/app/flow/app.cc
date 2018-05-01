@@ -103,12 +103,12 @@ void App::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
   node_manager_.SetViewer(viewer);
 }
 
-void App::ProcessFrame(int frame_num) {
-  printf("Processing frame %d\n", frame_num);
+void App::Process() {
+  printf("Processing frame %ld\n", scan_at_);
 
   library::timer::Timer timer;
 
-  const auto &scan = scans_[frame_num];
+  const auto &scan = scans_[scan_at_];
 
   timer.Start();
   flow_processor_.Update(scan);
@@ -116,13 +116,28 @@ void App::ProcessFrame(int frame_num) {
 
   // Update node manager
   printf("Update node manager...\n");
-  node_manager_.Update(flow_processor_, scans_[frame_num-1], scans_[frame_num], &tracklets_, frame_num);
+  node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
+  printf("Done\n");
+}
+
+void App::Refresh() {
+  printf("Processing frame %ld\n", scan_at_);
+
+  library::timer::Timer timer;
+
+  timer.Start();
+  flow_processor_.Refresh();
+  printf("Took %5.3f ms to refresh flow\n", timer.GetMs());
+
+  // Update node manager
+  printf("Update node manager...\n");
+  node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
   printf("Done\n");
 }
 
 void App::ProcessNext() {
   scan_at_++;
-  ProcessFrame(scan_at_);
+  Process();
 }
 
 void App::QueueCommand(const Command &command) {
@@ -130,6 +145,8 @@ void App::QueueCommand(const Command &command) {
 }
 
 void App::HandleClick(const Command &command) {
+  printf("\n");
+
   double x = command.GetClickX();
   double y = command.GetClickY();
 
@@ -137,20 +154,16 @@ void App::HandleClick(const Command &command) {
 
   node_manager_.ShowDistanceMap(flow_processor_, x, y);
 
-  // Get classification result
-  const auto &cm = flow_processor_.GetClassificationMap();
-  const auto &probs = cm.GetClassProbabilitiesXY(x, y);
+  // Get filter result
+  const auto &fm = flow_processor_.GetFilterMap();
+  float prob = fm.GetFilterProbabilityXY(x, y);
 
-  printf("\n");
-  for (const auto &kv : probs) {
-    printf("%10s:\t %7.3f %%\n", kt::ObjectClassToString(kv.first).c_str(), 100.0 * kv.second);
-  }
-  printf("\n");
+  printf("Filter prob: %5.3f %%\n", prob * 100.0);
 
   // Get flow result
   const auto &fi = flow_processor_.GetFlowImage();
   printf("Flow is %d %d (%s)\n", fi.GetXFlowXY(x, y), fi.GetYFlowXY(x, y),
-                                 fi.GetFlowValid(x, y) ? "valid":"not valid");
+                                 fi.GetFlowValidXY(x, y) ? "valid":"not valid");
 }
 
 void App::HandleClearDistanceMap(const Command &command) {
@@ -162,12 +175,48 @@ void App::HandleViewMode(const Command &command) {
   node_manager_.SetViewMode(view_mode);
 }
 
+void App::HandleIterations(const Command &command) {
+  int iterations = flow_processor_.GetIterations();
+
+  if (command.GetCommandType() == Type::INCREASE_ITERATIONS) {
+    iterations++;
+  }
+
+  if (command.GetCommandType() == Type::DECREASE_ITERATIONS) {
+    iterations--;
+  }
+
+  if (iterations < 1) {
+    iterations = 1;
+  }
+
+  flow_processor_.SetIterations(iterations);
+
+  printf("Set iterations to %d\n", iterations);
+}
+
+void App::HandleRefresh(const Command &command) {
+  Refresh();
+}
+
 void App::ProcessCommands() {
   while (running_) {
     const Command c = command_queue_.Pop(10);
 
     if (c.GetCommandType() == Type::CLEAR_DM) {
       HandleClearDistanceMap(c);
+    }
+
+    if (c.GetCommandType() == Type::INCREASE_ITERATIONS) {
+      HandleIterations(c);
+    }
+
+    if (c.GetCommandType() == Type::DECREASE_ITERATIONS) {
+      HandleIterations(c);
+    }
+
+    if (c.GetCommandType() == Type::REFRESH) {
+      HandleRefresh(c);
     }
 
     if (c.GetCommandType() == Type::NEXT) {

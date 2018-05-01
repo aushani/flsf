@@ -14,8 +14,9 @@ class Solver {
   Solver(int nx, int ny, int n_window);
 
   FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq,
-                        const gu::GpuData<3, float> &classification,
-                        float resolution);
+                        const gu::GpuData<3, float> &filter,
+                        float resolution,
+                        int iters);
 
  private:
   const int           nx_;

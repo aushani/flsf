@@ -6,6 +6,9 @@ namespace flow {
 enum Type {
   NONE,
   CLEAR_DM,
+  REFRESH,
+  INCREASE_ITERATIONS,
+  DECREASE_ITERATIONS,
   NEXT,
   VIEW_MODE,
   CLICK_AT,

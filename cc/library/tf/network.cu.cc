@@ -5,24 +5,31 @@
 namespace library {
 namespace tf {
 
-Network::Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const ConvolutionalLayer &clc) :
+Network::Network(const ConvolutionalLayer &l1,
+                 const ConvolutionalLayer &l2,
+                 const ConvolutionalLayer &l3,
+                 const ConvolutionalLayer &latent,
+                 const ConvolutionalLayer &cl_filter) :
  cl1_(l1),
  cl2_(l2),
  cl3_(l3),
  clatent_(latent),
- cl_classifier_(clc),
+ //cl_classifier_(clc),
+ cl_filter_(cl_filter),
  input_(167, 167, 12),
  res_cl1_(167, 167, 200),
  res_cl2_(167, 167, 100),
  res_cl3_(167, 167, 50),
  res_clatent_(167, 167, 25),
- res_classifier_(167, 167, 8) {
+ //res_classifier_(167, 167, 8),
+ res_filter_(167, 167, 2) {
   input_.SetCoalesceDim(0);
   res_cl1_.SetCoalesceDim(0);
   res_cl2_.SetCoalesceDim(0);
   res_cl3_.SetCoalesceDim(0);
   res_clatent_.SetCoalesceDim(0);
-  res_classifier_.SetCoalesceDim(0);
+  //res_classifier_.SetCoalesceDim(0);
+  res_filter_.SetCoalesceDim(0);
 }
 
 __global__ void SetUnknown(gu::GpuData<3, float> dense) {
@@ -109,8 +116,12 @@ const gu::GpuData<3, float>& Network::GetEncoding() const {
   return res_clatent_;
 }
 
-const gu::GpuData<3, float>& Network::GetClassification() const {
-  return res_classifier_;
+//const gu::GpuData<3, float>& Network::GetClassification() const {
+//  return res_classifier_;
+//}
+
+const gu::GpuData<3, float>& Network::GetFilter() const {
+  return res_filter_;
 }
 
 void Network::Apply() {
@@ -119,7 +130,9 @@ void Network::Apply() {
   cl3_.Apply(res_cl2_, &res_cl3_);
   clatent_.Apply(res_cl3_, &res_clatent_);
 
-  cl_classifier_.Apply(res_clatent_, &res_classifier_);
+  //cl_classifier_.Apply(res_clatent_, &res_classifier_);
+
+  cl_filter_.Apply(res_clatent_, &res_filter_);
 }
 
 // Load from file
@@ -151,8 +164,11 @@ Network Network::LoadNetwork(const fs::path &path) {
   gu::GpuData<4, float> latent_weights(1, 1, 50, 25);
   gu::GpuData<1, float> latent_biases(25);
 
-  gu::GpuData<4, float> classifier_weights(1, 1, 25, 8);
-  gu::GpuData<1, float> classifier_biases(8);
+  //gu::GpuData<4, float> classifier_weights(1, 1, 25, 8);
+  //gu::GpuData<1, float> classifier_biases(8);
+
+  gu::GpuData<4, float> filter_weights(1, 1, 25, 2);
+  gu::GpuData<1, float> filter_biases(2);
 
   l1_weights.CopyFrom(Network::LoadFile(path / "Encoder_l1_weights.dat"));
   l1_biases.CopyFrom(Network::LoadFile(path / "Encoder_l1_biases.dat"));
@@ -166,18 +182,23 @@ Network Network::LoadNetwork(const fs::path &path) {
   latent_weights.CopyFrom(Network::LoadFile(path / "Encoder_latent_weights.dat"));
   latent_biases.CopyFrom(Network::LoadFile(path / "Encoder_latent_biases.dat"));
 
-  classifier_weights.CopyFrom(Network::LoadFile(path / "classifier_weights.dat"));
-  classifier_biases.CopyFrom(Network::LoadFile(path / "classifier_biases.dat"));
+  //classifier_weights.CopyFrom(Network::LoadFile(path / "classifier_weights.dat"));
+  //classifier_biases.CopyFrom(Network::LoadFile(path / "classifier_biases.dat"));
+
+  filter_weights.CopyFrom(Network::LoadFile(path / "filter_weights.dat"));
+  filter_biases.CopyFrom(Network::LoadFile(path / "filter_biases.dat"));
 
   ConvolutionalLayer l1(l1_weights, l1_biases);
   ConvolutionalLayer l2(l2_weights, l2_biases);
   ConvolutionalLayer l3(l3_weights, l3_biases);
   ConvolutionalLayer latent(latent_weights, latent_biases);
-  ConvolutionalLayer classifier(classifier_weights, classifier_biases);
+  //ConvolutionalLayer classifier(classifier_weights, classifier_biases);
+  ConvolutionalLayer filter(filter_weights, filter_biases);
 
   printf("Loaded\n");
 
-  return Network(l1, l2, l3, latent, classifier);
+  //return Network(l1, l2, l3, latent, classifier);
+  return Network(l1, l2, l3, latent, filter);
 }
 
 } // namespace tf

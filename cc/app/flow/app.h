@@ -59,13 +59,16 @@ class App {
   void LoadTrackletData(const fs::path &tsf_dir, const std::string &date, int log_num);
   void LoadPoses(const fs::path &tsf_dir, const std::string &date, int log_num);
 
-  void ProcessFrame(int frame_num);
+  void Process();
+  void Refresh();
 
   void ProcessCommands();
 
   void HandleClick(const Command &command);
   void HandleViewMode(const Command &command);
   void HandleClearDistanceMap(const Command &command);
+  void HandleIterations(const Command &command);
+  void HandleRefresh(const Command &command);
 };
 
 } // flow

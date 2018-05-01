@@ -13,7 +13,8 @@ NodeManager::NodeManager(const fs::path &car_path) :
  og1n_(new rtn::OccGrid()),
  og2n_(new rtn::OccGrid()),
  fin_(new fln::FlowImage()),
- cmn_(new fln::ClassificationMap()),
+ //cmn_(new fln::ClassificationMap()),
+ fmn_(new fln::FilterMap()),
  dmn_(new fln::DistanceMap()),
  car_node_(new osgn::Car(car_path)) {
 }
@@ -26,7 +27,8 @@ void NodeManager::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
   viewer->AddChild(og1n_);
   viewer->AddChild(og2n_);
   viewer->AddChild(fin_);
-  viewer->AddChild(cmn_);
+  //viewer->AddChild(cmn_);
+  viewer->AddChild(fmn_);
   viewer->AddChild(dmn_);
   viewer->AddChild(car_node_);
 
@@ -52,7 +54,8 @@ void NodeManager::UpdateViewer() {
     og2n_->Render(false);
 
     fin_->Render(true);
-    cmn_->Render(false);
+    //cmn_->Render(false);
+    fmn_->Render(false);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 2) {
@@ -66,7 +69,8 @@ void NodeManager::UpdateViewer() {
     og2n_->Render(true);
 
     fin_->Render(true);
-    cmn_->Render(false);
+    //cmn_->Render(false);
+    fmn_->Render(false);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 3) {
@@ -80,7 +84,8 @@ void NodeManager::UpdateViewer() {
     og2n_->Render(false);
 
     fin_->Render(false);
-    cmn_->Render(true);
+    //cmn_->Render(true);
+    fmn_->Render(true);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 4) {
@@ -94,7 +99,8 @@ void NodeManager::UpdateViewer() {
     og2n_->Render(false);
 
     fin_->Render(false);
-    cmn_->Render(false);
+    //cmn_->Render(false);
+    fmn_->Render(false);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 5) {
@@ -108,7 +114,8 @@ void NodeManager::UpdateViewer() {
     og2n_->Render(false);
 
     fin_->Render(false);
-    cmn_->Render(false);
+    //cmn_->Render(false);
+    fmn_->Render(false);
 
     //car_node_->Render(true);
   }
@@ -138,16 +145,20 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
 
   t.Start();
   og1n_->Update(fp.GetLastOccGrid1());
-  og2n_->Update(fp.GetLastOccGrid2(), fp.GetClassificationMap());
+  og2n_->Update(fp.GetLastOccGrid2(), fp.GetFilterMap());
   printf("Occ Grids took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
   fin_->Update(fp.GetFlowImage());
   printf("Flow image took %5.3f ms to render\n", t.GetMs());
 
+  //t.Start();
+  //cmn_->Update(fp.GetClassificationMap());
+  //printf("Classification Map took %5.3f ms to render\n", t.GetMs());
+
   t.Start();
-  cmn_->Update(fp.GetClassificationMap());
-  printf("Classification Map took %5.3f ms to render\n", t.GetMs());
+  fmn_->Update(fp.GetFilterMap());
+  printf("Filter map took %5.3f ms to render\n", t.GetMs());
 
   viewer_->Unlock();
 

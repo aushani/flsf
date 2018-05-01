@@ -3,11 +3,13 @@ cc_library(
     hdrs = [
              "flow_image.h",
              "classification_map.h",
+             "filter_map.h",
              "distance_map.h",
            ],
     srcs = [
              "flow_image.cc",
              "classification_map.cc",
+             "filter_map.cc",
              "distance_map.cc",
            ],
     deps = [

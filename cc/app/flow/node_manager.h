@@ -8,7 +8,8 @@
 #include "library/kitti/nodes/point_cloud.h"
 #include "library/kitti/nodes/tracklets.h"
 #include "library/flow/nodes/flow_image.h"
-#include "library/flow/nodes/classification_map.h"
+//#include "library/flow/nodes/classification_map.h"
+#include "library/flow/nodes/filter_map.h"
 #include "library/osg_nodes/car.h"
 #include "library/ray_tracing/nodes/occ_grid.h"
 #include "library/flow/nodes/distance_map.h"
@@ -54,7 +55,8 @@ class NodeManager {
   osg::ref_ptr<rtn::OccGrid> og2n_;
 
   osg::ref_ptr<fln::FlowImage> fin_;
-  osg::ref_ptr<fln::ClassificationMap> cmn_;
+  //osg::ref_ptr<fln::ClassificationMap> cmn_;
+  osg::ref_ptr<fln::FilterMap> fmn_;
 
   osg::ref_ptr<fln::DistanceMap> dmn_;
 
