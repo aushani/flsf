@@ -28,9 +28,9 @@ void Extractor::WriteOccGrid(const rt::OccGrid &og) {
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;
 
-  for (int ii = i0; ii < i1; ii++) {
-    for (int jj = j0; jj < j1; jj++) {
-      for (int kk = k0; kk < k1; kk++) {
+  for (int ii = i0; ii <= i1; ii++) {
+    for (int jj = j0; jj <= j1; jj++) {
+      for (int kk = k0; kk <= k1; kk++) {
         rt::Location loc(ii, jj, kk);
 
         float p = og.GetProbability(loc);
@@ -48,8 +48,8 @@ void Extractor::WriteFilter(int frame) {
   int j0 = ps::kOccGridMinXY;
   int j1 = ps::kOccGridMaxXY;
 
-  for (int ii = i0; ii < i1; ii++) {
-    for (int jj = j0; jj < j1; jj++) {
+  for (int ii = i0; ii <= i1; ii++) {
+    for (int jj = j0; jj <= j1; jj++) {
       double x1 = ii * ps::kResolution;
       double y1 = jj * ps::kResolution;
       double z1 = 0.0;
@@ -85,25 +85,26 @@ void Extractor::WriteFlow(int frame1, int frame2) {
   int j0 = ps::kOccGridMinXY;
   int j1 = ps::kOccGridMaxXY;
 
-  for (int ii = i0; ii < i1; ii++) {
-    for (int jj = j0; jj < j1; jj++) {
-      double x1 = i1 * ps::kResolution;
-      double y1 = j1 * ps::kResolution;
+  for (int ii = i0; ii <= i1; ii++) {
+    for (int jj = j0; jj <= j1; jj++) {
+      double x1 = ii * ps::kResolution;
+      double y1 = jj * ps::kResolution;
 
       Eigen::Vector2f pos1(x1, y1);
 
       // Project position
       Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, frame1, frame2, p1, p2);
-      int i2_match = std::round(pos2.x() / ps::kResolution);
-      int j2_match = std::round(pos2.y() / ps::kResolution);
+      //int i2_match = std::round(pos2.x() / ps::kResolution);
+      //int j2_match = std::round(pos2.y() / ps::kResolution);
 
       // Compute flow
-      int flow_i = i2_match - ii;
-      int flow_j = j2_match - jj;
+      Eigen::Vector2f flow = pos2 - pos1;
+      float flow_i = flow.x();
+      float flow_j = flow.y();
 
       // Write it out
-      save_file_.write(reinterpret_cast<const char*>(&flow_i), sizeof(int));
-      save_file_.write(reinterpret_cast<const char*>(&flow_j), sizeof(int));
+      save_file_.write(reinterpret_cast<const char*>(&flow_i), sizeof(float));
+      save_file_.write(reinterpret_cast<const char*>(&flow_j), sizeof(float));
     }
   }
 }

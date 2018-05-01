@@ -1,65 +1,34 @@
 import numpy as np
 
-idx_to_classes = ['Car', 'Cycl', 'Misc', 'NO_O', 'Pede', 'Tram', 'Truc', 'Van']
-classes_to_idx = {}
-for i, cn in enumerate(idx_to_classes):
-    classes_to_idx[cn] = i
-n_classes = len(idx_to_classes)
-
 class Sample:
 
     def __init__(self, data, rotate=0, flip=False):
-        self.width = 7
-        self.length = 7
-        self.height = 12
+        self.width = 167
+        self.length = 167
+        self.height = 13
 
         self.occ1 = data['occ1'].reshape((self.width, self.length, self.height))
         self.occ2 = data['occ2'].reshape((self.width, self.length, self.height))
 
-        # Data augmentation
-        self.occ1 = np.rot90(self.occ1, k=rotate);
-        self.occ2 = np.rot90(self.occ2, k=rotate);
-
-        if flip:
-            self.occ1 = self.occ1.transpose(1, 0, 2)
-            self.occ2 = self.occ2.transpose(1, 0, 2)
+        self.filter = data['filter'].reshape((self.width, self.length))
+        self.flow = data['flow'].reshape((self.width, self.length, 2))
 
         # Rescale range from 0-1 to -0.5 - +0.5
         self.occ1 -= 0.5
         self.occ2 -= 0.5
 
-        self.feature_vector = self.get_icra2017_feature_vector()
+        # Data augmentation
+        self.occ1 = np.rot90(self.occ1, k=rotate)
+        self.occ2 = np.rot90(self.occ2, k=rotate)
+        self.filter = np.rot90(self.filter, k=rotate)
+        self.flow = np.rot90(self.flow, k=rotate)
 
-        self.label1 = data['label1']
-        self.match = data['match']
+        if flip:
+            self.occ1 = self.occ1.transpose(1, 0, 2)
+            self.occ2 = self.occ2.transpose(1, 0, 2)
 
-        self.filter = 0
-        if self.label1 == 3:
-            self.filter = 1
-
-    def get_icra2017_feature_vector(self):
-        feature_vector = np.zeros((3*self.height,))
-
-        i_mid = self.width / 2
-        j_mid = self.length / 2
-        for i in range(self.height):
-            p1 = self.occ1[i_mid, j_mid, i] + 0.5
-            p2 = self.occ2[i_mid, j_mid, i] + 0.5
-
-            idx_offset = 0
-
-            if p1 < 0.5 and p2 < 0.5:
-                idx_offset = 0
-            elif p1 > 0.5 and p2 > 0.5:
-                idx_offset = self.height
-            elif p1 < 0.5 and p2 > 0.5:
-                idx_offset = 2*self.height
-            elif p1 > 0.5 and p2 < 0.5:
-                idx_offset = 2*self.height
-
-            feature_vector[i + idx_offset] = 1
-
-        return feature_vector
+            self.filter = self.filter.transpose()
+            self.flow = self.flow.transpose(1, 0, 2)
 
 class SampleSet:
 
@@ -69,30 +38,13 @@ class SampleSet:
 
         self.occ1 = np.zeros(shape)
         self.occ2 = np.zeros(shape)
-        self.match = np.zeros((n,))
 
-        self.label1 = np.zeros((n,))
-        self.filter = np.zeros((n,))
-
-        self.feature_vector = np.zeros((n, samples[0].feature_vector.shape[0]))
-
-        self.samples = samples
+        self.filter = np.zeros((n, samples[0].filter.shape[0], samples[0].filter.shape[1]))
+        self.flow = np.zeros((n, samples[0].flow.shape[0], samples[0].flow.shape[1], samples[0].flow.shape[2]))
 
         for i, sample in enumerate(samples):
             self.occ1[i, :, :, :] = sample.occ1
             self.occ2[i, :, :, :] = sample.occ2
 
-            self.label1[i] = sample.label1
-            self.match[i] = sample.match
-
-            self.filter[i] = sample.filter
-
-            self.feature_vector[i, :] = sample.feature_vector
-
-    def get_scores(self):
-        scores = []
-
-        for sample in self.samples:
-            scores.append(sample.get_score())
-
-        return np.array(scores)
+            self.filter[i, :, :] = sample.filter
+            self.flow[i, :, :, :] = sample.flow

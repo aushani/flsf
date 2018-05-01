@@ -7,19 +7,19 @@ import matplotlib.pyplot as plt
 
 class DataManager:
 
-    def __init__(self, path='/home/aushani/data/matches_v2/'):
+    def __init__(self, path='/home/aushani/data/flow_training_data/'):
         # only use first 10 for training
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0005_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0009_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0011_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0013_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0014_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0015_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0017_sync/matches.bin' % (path),
-            '%s/2011_09_26_drive_0018_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0005_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0009_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0011_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0013_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0014_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0015_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0017_sync/matches.bin' % (path),
+            #'%s/2011_09_26_drive_0018_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0019_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0020_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0022_sync/matches.bin' % (path),
@@ -53,16 +53,15 @@ class DataManager:
         self.f_ptrs = {}
         self.file_ranges = {}
 
-        self.width = 7
-        self.length = 7
-        self.height = 12
+        self.width = 167
+        self.length = 167
+        self.height = 13
 
         self.size_occ = self.width * self.length * self.height
-        self.size_label = 1
+        self.size_filter = self.width * self.length
+        self.size_flow = self.width * self.length * 2
 
-        self.size_match = 1
-
-        self.sample_size_bytes = (self.size_occ*2 + self.size_label + self.size_match)*4
+        self.sample_size_bytes = (self.size_occ*2 + self.size_filter + self.size_flow)*4
 
         count = 0
         for fn in self.filenames:
@@ -79,7 +78,7 @@ class DataManager:
 
         self.idx_at = 0
         self.idxs = np.arange(0, count)
-        np.random.shuffle(self.idxs)
+        #np.random.shuffle(self.idxs)
 
         self.reserved = [False,] * self.num_samples
 
@@ -107,11 +106,11 @@ class DataManager:
 
         return res
 
-    def get_sample(self, idx=0, augment = False):
+    def get_sample(self, idx, augment = False):
         dt = np.dtype([  ('occ1', (np.float32, self.size_occ)),
                          ('occ2', (np.float32, self.size_occ)),
-                         ('label1', (np.int32, self.size_label)),
-                         ('match', (np.int32, self.size_match))])
+                         ('filter', (np.int32, self.size_filter)),
+                         ('flow', (np.float32, self.size_flow))])
 
         # Figure out which file
         fn_idx = None
@@ -140,6 +139,39 @@ class DataManager:
 
 if __name__ == '__main__':
     d = DataManager()
-    d.make_validation(100)
+    #d.make_validation(100)
 
-    valid_set = d.validation_set
+    #valid_set = d.validation_set
+
+    sample = d.get_next_sample(augment = False)
+    sample = d.get_next_sample(augment = False)
+    sample = d.get_next_sample(augment = False)
+    sample = d.get_next_sample(augment = False)
+    sample = d.get_next_sample(augment = False)
+
+    print 'occ1', np.min(sample.occ1[:]), np.max(sample.occ1[:])
+    print 'occ2', np.min(sample.occ2[:]), np.max(sample.occ2[:])
+
+    print 'filter', np.min(sample.filter[:]), np.max(sample.filter[:])
+
+    flow_i = sample.flow[:, :, 0]
+    flow_j = sample.flow[:, :, 1]
+
+    print 'flow i', np.min(flow_i[:]), np.max(flow_i[:])
+    print 'flow j', np.min(flow_j[:]), np.max(flow_j[:])
+
+    plt.clf()
+
+    plt.subplot(3, 1, 1)
+    plt.pcolor(sample.filter)
+    plt.colorbar()
+
+    plt.subplot(3, 1, 2)
+    plt.pcolor(flow_i)
+    plt.colorbar()
+
+    plt.subplot(3, 1, 3)
+    plt.pcolor(flow_j)
+    plt.colorbar()
+
+    plt.show()
