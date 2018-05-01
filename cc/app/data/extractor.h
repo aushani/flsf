@@ -42,10 +42,10 @@ class Extractor {
 
   std::ofstream save_file_;
 
-  size_t count_written_ = 0;
-
   void ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2);
-  void Write(const rt::OccGrid &og, int i, int j);
+  void WriteOccGrid(const rt::OccGrid &og);
+  void WriteFilter(int frame);
+  void WriteFlow(int frame1, int frame2);
 };
 
 } // data

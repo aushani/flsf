@@ -17,13 +17,13 @@ Extractor::Extractor(const fs::path &base_path, const fs::path &save_path) :
   tracklets_.loadFromFile( (base_path / "tracklet_labels.xml").string() );
 }
 
-void Extractor::Write(const rt::OccGrid &og, int i, int j) {
+void Extractor::WriteOccGrid(const rt::OccGrid &og) {
   // Get bounds
-  int i0 = i - ps::kPatchSize / 2;
-  int i1 = i0 + ps::kPatchSize;
+  int i0 = ps::kOccGridMinXY;
+  int i1 = ps::kOccGridMaxXY;
 
-  int j0 = j - ps::kPatchSize / 2;
-  int j1 = j0 + ps::kPatchSize;
+  int j0 = ps::kOccGridMinXY;
+  int j1 = ps::kOccGridMaxXY;
 
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;
@@ -40,75 +40,87 @@ void Extractor::Write(const rt::OccGrid &og, int i, int j) {
   }
 }
 
-void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2) {
-  // Get vehicle poses
-  kt::Pose p1 = sm_poses_[idx1];
-  kt::Pose p2 = sm_poses_[idx2];
+void Extractor::WriteFilter(int frame) {
+  // Get bounds
+  int i0 = ps::kOccGridMinXY;
+  int i1 = ps::kOccGridMaxXY;
 
-  // How often do we record a match query
-  double p_match = 1.0 / (ps::kSearchSize * ps::kSearchSize - 1);
-  std::bernoulli_distribution rand_match(p_match);
+  int j0 = ps::kOccGridMinXY;
+  int j1 = ps::kOccGridMaxXY;
 
-  // How often do we try out a spot in the occ grid if it's background
-  double p_bg = 0.02;
-  std::bernoulli_distribution rand_bg(p_bg);
-
-  // Iterate through occ grid
-  for (int i1=ps::kOccGridMinXY; i1<=ps::kOccGridMaxXY; i1++) {
-    for (int j1=ps::kOccGridMinXY; j1<=ps::kOccGridMaxXY; j1++) {
-      double x1 = i1 * ps::kResolution;
-      double y1 = j1 * ps::kResolution;
+  for (int ii = i0; ii < i1; ii++) {
+    for (int jj = j0; jj < j1; jj++) {
+      double x1 = ii * ps::kResolution;
+      double y1 = jj * ps::kResolution;
       double z1 = 0.0;
+
       Eigen::Vector2f pos1(x1, y1);
 
-      // Check to make sure we're in camera view
-      if (!camera_cal_.InCameraView(x1, y1, z1)) {
-        continue;
-      }
-
       // Get object type
-      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
+      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, frame, ps::kResolution);
 
-      // If it's background, we should potentially skip it because we get a lot
-      // of these
-      if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
-        continue;
+      int label = -1;
+
+      if (camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
+        label = 0;
+      } else if (c != kt::ObjectClass::NO_OBJECT) {
+        label = 1;
       }
 
-      // Project position from og1 to og2
-      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, idx1, idx2, p1, p2);
+      // Write it out
+      save_file_.write(reinterpret_cast<const char*>(&label), sizeof(int));
+    }
+  }
+}
+
+void Extractor::WriteFlow(int frame1, int frame2) {
+  // Get vehicle poses
+  kt::Pose p1 = sm_poses_[frame1];
+  kt::Pose p2 = sm_poses_[frame2];
+
+  // Get bounds
+  int i0 = ps::kOccGridMinXY;
+  int i1 = ps::kOccGridMaxXY;
+
+  int j0 = ps::kOccGridMinXY;
+  int j1 = ps::kOccGridMaxXY;
+
+  for (int ii = i0; ii < i1; ii++) {
+    for (int jj = j0; jj < j1; jj++) {
+      double x1 = i1 * ps::kResolution;
+      double y1 = j1 * ps::kResolution;
+
+      Eigen::Vector2f pos1(x1, y1);
+
+      // Project position
+      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, frame1, frame2, p1, p2);
       int i2_match = std::round(pos2.x() / ps::kResolution);
       int j2_match = std::round(pos2.y() / ps::kResolution);
 
-      // Look through search spacej;w
-      for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
-        for (int dj=ps::kMinSearchDist; dj<=ps::kMaxSearchDist/2; dj++) {
-          int i2 = i1 + di;
-          int j2 = j1 + dj;
+      // Compute flow
+      int flow_i = i2_match - ii;
+      int flow_j = j2_match - jj;
 
-          bool match = (i2 == i2_match) && (j2 == j2_match);
-
-          // Need to do some kind of random filtering, otherwise way too much
-          // data to store
-          if (!match && !rand_match(random_generator_)) {
-            continue;
-          }
-
-          // Now we can save this one!
-          Write(og1, i1, j1);
-          Write(og2, i2, j2);
-
-          int object_type = kt::ObjectClassToInt(c);
-          save_file_.write(reinterpret_cast<const char*>(&object_type), sizeof(int));
-
-          int match_flag = match ? 1:0;
-          save_file_.write(reinterpret_cast<const char*>(&match_flag), sizeof(int));
-
-          count_written_++;
-        }
-      }
+      // Write it out
+      save_file_.write(reinterpret_cast<const char*>(&flow_i), sizeof(int));
+      save_file_.write(reinterpret_cast<const char*>(&flow_j), sizeof(int));
     }
   }
+}
+
+void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2) {
+  // Write out out grids
+  printf("\tWriting Occ Grids...\n");
+  WriteOccGrid(og1);
+  WriteOccGrid(og2);
+
+  // Write out object types
+  printf("\tWriting Filter...\n");
+  WriteFilter(idx1);
+
+  // Write out ground truth flow
+  printf("\tWriting Flow...\n");
+  WriteFlow(idx1, idx2);
 }
 
 void Extractor::Run() {
@@ -122,7 +134,7 @@ void Extractor::Run() {
     ProcessOccGrids(prev, next, scan_at - 1, scan_at);
     prev = next;
 
-    printf("Processed frame %ld, written %ld so far\n", scan_at, count_written_);
+    printf("Processed frame %ld / %ld\n", scan_at, scans_.size());
   }
 }
 
