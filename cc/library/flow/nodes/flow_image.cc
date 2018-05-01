@@ -25,13 +25,17 @@ void FlowImage::Update(const fl::FlowImage &fi) {
   }
 
   float z = 0;
-  osg::Vec4 color(0, 0, 0, 0);
+  osg::Vec4 color_valid(0, 0, 0, 0);
+  osg::Vec4 color_invalid(0.5, 0.5, 0.5, 0.5);
 
   for (int i=fi.MinX(); i<=fi.MaxX(); i++) {
     for (int j=fi.MinY(); j<=fi.MaxY(); j++) {
+      osg::Vec4 color = color_valid;
+
       // Check for valid flow
       if (!fi.GetFlowValid(i, j)) {
-        continue;
+        //continue;
+        color = color_invalid;
       }
 
       float fx = fi.GetResolution() * fi.GetXFlow(i, j);

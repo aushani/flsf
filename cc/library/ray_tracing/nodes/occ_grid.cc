@@ -32,6 +32,10 @@ OccGrid::OccGrid(const rt::OccGrid &og, const fl::FilterMap &fm, double thresh_l
   Update(og, fm, thresh_lo);
 }
 
+void OccGrid::SetCameraCal(const kt::CameraCal &cc) {
+  camera_cal_ = cc;
+}
+
 void OccGrid::Update(const rt::OccGrid &og, double thresh_lo) {
   // Remove old children
   while (getNumChildren() > 0) {
@@ -60,6 +64,12 @@ void OccGrid::Update(const rt::OccGrid &og, double thresh_lo) {
 
     if (alpha > 0.8) {
       alpha = 0.8;
+    }
+
+    if (camera_cal_) {
+      if (!camera_cal_->InCameraView(x, y, 0)) {
+        alpha *= 0.25;
+      }
     }
 
     osg::Vec4 color(0.1, 0.9, 0.1, alpha);
@@ -98,6 +108,12 @@ void OccGrid::Update(const rt::OccGrid &og, const fl::ClassificationMap &cm, dou
 
     if (alpha > 0.8) {
       alpha = 0.8;
+    }
+
+    if (camera_cal_) {
+      if (!camera_cal_->InCameraView(x, y, 0)) {
+        alpha *= 0.25;
+      }
     }
 
     double r = 0.3;
@@ -145,6 +161,12 @@ void OccGrid::Update(const rt::OccGrid &og, const fl::FilterMap &fm, double thre
 
     if (alpha > 0.8) {
       alpha = 0.8;
+    }
+
+    if (camera_cal_) {
+      if (!camera_cal_->InCameraView(x, y, 0)) {
+        alpha *= 0.25;
+      }
     }
 
     double r = 0.3;

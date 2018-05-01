@@ -6,24 +6,28 @@
 #include <osgViewer/CompositeViewer>
 
 #include "library/kitti/tracklets.h"
-#include "library/viewer/pick_handler.h"
+#include "library/kitti/camera_cal.h"
+#include "library/viewer/mouse_handler.h"
 
 namespace kt = library::kitti;
+namespace fs = boost::filesystem;
 
 namespace app {
 namespace viewer {
 
-// from osgpick example
-// class to handle events with a pick
-class SimpleHandler : public library::viewer::PickHandler {
+class SimpleHandler : public library::viewer::MouseHandler {
  public:
-  SimpleHandler(const kt::Tracklets &tracklets, int frame);
+  SimpleHandler(const fs::path &base_path);
 
-  void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+  void SetFrame(int frame);
+
+  void HandleClick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
 
  private:
   kt::Tracklets tracklets_;
   int frame_ = 0;
+
+  kt::CameraCal camera_cal_;
 
   std::string GetClass(double x, double y);
 };

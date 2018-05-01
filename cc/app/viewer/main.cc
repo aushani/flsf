@@ -1,6 +1,7 @@
 #include <iostream>
 #include <osg/ArgumentParser>
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/tracklets.h"
@@ -105,6 +106,9 @@ int main(int argc, char** argv) {
 
   fs::path car_path = fs::path(tsf_data_dir) / "osg_models/lexus/lexus_hs.obj";
 
+  std::string dir_name = (boost::format("%s_drive_%04d_sync") % kitti_log_date % log_num).str();
+  fs::path base_path = fs::path(tsf_data_dir) / "kittidata" / kitti_log_date / dir_name;
+
   // Load velodyne scan
   printf("Loading vel\n");
   kt::VelodyneScan scan = LoadVelodyneScan(tsf_data_dir, kitti_log_date, log_num, frame_num);
@@ -127,10 +131,15 @@ int main(int argc, char** argv) {
   vw::Viewer v(&args);
 
   osg::ref_ptr<kt::nodes::PointCloud> pc = new kt::nodes::PointCloud(scan);
-  osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid(og);
+  osg::ref_ptr<rt::nodes::OccGrid> ogn = new rt::nodes::OccGrid();
   osg::ref_ptr<kt::nodes::Tracklets> tn = new kt::nodes::Tracklets(&tracklets, frame_num);
-  osg::ref_ptr<avw::SimpleHandler> ph = new avw::SimpleHandler(tracklets, frame_num);
+  osg::ref_ptr<avw::SimpleHandler> ph = new avw::SimpleHandler(base_path);
   osg::ref_ptr<osgn::Car> car_node = new osgn::Car(car_path);
+
+  ogn->SetCameraCal(kt::CameraCal(base_path.parent_path()));
+  ogn->Update(og);
+
+  ph->SetFrame(frame_num);
 
   v.AddChild(pc);
   v.AddChild(ogn);

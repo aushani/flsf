@@ -7,27 +7,26 @@
 namespace app {
 namespace viewer {
 
-SimpleHandler::SimpleHandler(const kt::Tracklets &tracklets, int frame) :
-  library::viewer::PickHandler(),
-  tracklets_(tracklets),
-  frame_(frame) {
-
+SimpleHandler::SimpleHandler(const fs::path &base_path) :
+ library::viewer::MouseHandler(),
+ camera_cal_(base_path.parent_path()) {
+  tracklets_.loadFromFile( (base_path / "tracklet_labels.xml").string() );
 }
 
-void SimpleHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
-  osgUtil::LineSegmentIntersector::Intersections intersections;
+void SimpleHandler::SetFrame(int frame) {
+  frame_ = frame;
+}
 
-  if (view->computeIntersections(ea, intersections)) {
-    for (osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin();
-         hitr != intersections.end(); ++hitr) {
+void SimpleHandler::HandleClick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) {
+  osg::Vec3 p = GetClickLocation(view, ea);
 
-      osg::Vec3 p = hitr->getWorldIntersectPoint();
+  auto label = GetClass(p[0], p[1]);
+  printf("Class: %s\n", label.c_str());
 
-      auto label = GetClass(p[0], p[1]);
-      printf("Class: %s\n", label.c_str());
-
-      break;
-    }
+  if (camera_cal_.InCameraView(p[0], p[1], p[2])) {
+    printf("In camera view\n");
+  } else {
+    printf("NOT In camera view\n");
   }
 }
 

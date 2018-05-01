@@ -114,10 +114,14 @@ void App::Process() {
   flow_processor_.Update(scan);
   printf("Took %5.3f ms to compute flow\n", timer.GetMs());
 
+  printf("\n\n");
+
   // Update node manager
   printf("Update node manager...\n");
   node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
   printf("Done\n");
+
+  printf("\n\n");
 }
 
 void App::Refresh() {
@@ -129,10 +133,14 @@ void App::Refresh() {
   flow_processor_.Refresh();
   printf("Took %5.3f ms to refresh flow\n", timer.GetMs());
 
+  printf("\n\n");
+
   // Update node manager
   printf("Update node manager...\n");
   node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
   printf("Done\n");
+
+  printf("\n\n");
 }
 
 void App::ProcessNext() {

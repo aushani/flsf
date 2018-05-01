@@ -144,8 +144,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   printf("Tracklets took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  og1n_->Update(fp.GetLastOccGrid1());
-  og2n_->Update(fp.GetLastOccGrid2(), fp.GetFilterMap());
+  og1n_->Update(fp.GetLastOccGrid1(), fp.GetFilterMap());
+  og2n_->Update(fp.GetLastOccGrid2());
   printf("Occ Grids took %5.3f ms to render\n", t.GetMs());
 
   t.Start();

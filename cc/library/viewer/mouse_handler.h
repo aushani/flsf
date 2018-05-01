@@ -15,6 +15,9 @@ class MouseHandler : public osgGA::GUIEventHandler {
   bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa);
 
   virtual void HandleClick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea) = 0;
+
+ protected:
+  osg::Vec3 GetClickLocation(osgViewer::View *view, const osgGA::GUIEventAdapter& ea);
 };
 
 } // namespace viewer

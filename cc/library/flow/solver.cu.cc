@@ -71,25 +71,27 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
       float my_energy = d2;
 
       // Add smoothing
-      for (int i2 = i_from-2; i2 <= i_from+2; i2++) {
-        for (int j2 = j_from-2; j2 <= j_from+2; j2++) {
-          if (!flow_valid.InRange(i2, j2)) {
-            continue;
+      if (w_p > 0) {
+        for (int i2 = i_from-2; i2 <= i_from+2; i2++) {
+          for (int j2 = j_from-2; j2 <= j_from+2; j2++) {
+            if (!flow_valid.InRange(i2, j2)) {
+              continue;
+            }
+
+            if (!flow_valid(i2, j2)) {
+              continue;
+            }
+
+            int di2 = flow_est(i2, j2, 0);
+            int dj2 = flow_est(i2, j2, 1);
+
+            float dx = (di - di2);
+            float dy = (dj - dj2);
+
+            float d_flow = dx*dx + dy*dy;
+
+            my_energy += w_p * d_flow;
           }
-
-          if (!flow_valid(i2, j2)) {
-            continue;
-          }
-
-          int di2 = flow_est(i2, j2, 0);
-          int dj2 = flow_est(i2, j2, 1);
-
-          float dx = (di - di2);
-          float dy = (dj - dj2);
-
-          float d_flow = dx*dx + dy*dy;
-
-          my_energy += w_p * d_flow;
         }
       }
 
@@ -290,7 +292,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   //FlowKernel<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_);
   for (int iter = 0; iter<iters; iter++) {
     printf("Expectation\n");
-    Expectation<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_, energy, w_p);
+    Expectation<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_, energy, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
 
