@@ -8,9 +8,11 @@ plt.switch_backend('agg')
 
 class MetricLearning:
 
-    def __init__(self, data_manager):
+    def __init__(self, data_manager, exp_name="exp"):
 
         self.dm = data_manager
+
+        self.exp_name = exp_name
 
         self.width = self.dm.width
         self.length = self.dm.length
@@ -142,7 +144,7 @@ class MetricLearning:
             self.sess.run(tf.global_variables_initializer())
 
         # Set up writer
-        self.writer = tf.summary.FileWriter('./logs', self.sess.graph)
+        self.writer = tf.summary.FileWriter('./%s/logs' % (self.exp_name), self.sess.graph)
 
         # Save checkpoints
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
@@ -180,7 +182,7 @@ class MetricLearning:
 
             if iteration % it_save == 0:
                 tic = time.time()
-                save_path = saver.save(self.sess, "./model.ckpt", global_step = iteration)
+                save_path = saver.save(self.sess, "./%s/model.ckpt" % (self.exp_name), global_step = iteration)
                 toc = time.time()
 
                 #print '\tTook %5.3f sec to save checkpoint' % (toc - tic)
@@ -188,8 +190,8 @@ class MetricLearning:
             if iteration % it_plot == 0:
                 print 'Iteration %d' % (iteration)
 
-                self.make_metric_plot(valid_set, save='metric_%010d.png' % iteration)
-                self.make_filter_plot(valid_set, save='filter_%010d.png' % iteration)
+                self.make_metric_plot(valid_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_filter_plot(valid_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
 
                 print '  Filter accuracy = %5.3f %%' % (100.0 * self.filter_accuracy.eval(session = self.sess, feed_dict = fd_valid))
 
