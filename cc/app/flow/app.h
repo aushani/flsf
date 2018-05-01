@@ -9,6 +9,7 @@
 #include "library/kitti/velodyne_scan.h"
 #include "library/kitti/pose.h"
 #include "library/kitti/tracklets.h"
+#include "library/kitti/camera_cal.h"
 #include "library/viewer/viewer.h"
 
 #include "app/flow/command.h"
@@ -44,6 +45,8 @@ class App {
   kt::Tracklets tracklets_;
   std::vector<kt::Pose> raw_poses_;
   std::vector<kt::Pose> sm_poses_;
+
+  kt::CameraCal camera_cal_;
 
   size_t scan_at_ = 0;
 

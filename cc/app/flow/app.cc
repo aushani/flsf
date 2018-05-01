@@ -11,6 +11,7 @@ namespace app {
 namespace flow {
 
 App::App(const fs::path &tsf_dir, const std::string &date, int log_num, int frame_num) :
+ camera_cal_(tsf_dir / "kittidata" / date),
  scan_at_(frame_num),
  flow_processor_("/home/aushani/koopa_training/"),
  node_manager_(tsf_dir / "osg_models" / "lexus" / "lexus_hs.obj") {
@@ -34,6 +35,7 @@ App::App(const App &app) :
  tracklets_(app.tracklets_),
  raw_poses_(app.raw_poses_),
  sm_poses_(app.sm_poses_),
+ camera_cal_(app.camera_cal_),
  scan_at_(app.scan_at_),
  flow_processor_(app.flow_processor_),
  node_manager_(app.node_manager_) {
@@ -57,6 +59,7 @@ App App::operator=(const App& app) {
   tracklets_ = app.tracklets_;
   raw_poses_ = app.raw_poses_;
   sm_poses_ = app.sm_poses_;
+  camera_cal_ = app.camera_cal_;
   scan_at_ = app.scan_at_;
   flow_processor_ = app.flow_processor_;
   node_manager_ = app.node_manager_;
@@ -159,6 +162,12 @@ void App::HandleClick(const Command &command) {
   double y = command.GetClickY();
 
   printf("Click at %f, %f\n", x, y);
+
+  if (camera_cal_.InCameraView(x, y, 0)) {
+    printf("In camera view\n");
+  } else {
+    printf("NOT In camera view\n");
+  }
 
   node_manager_.ShowDistanceMap(flow_processor_, x, y);
 
