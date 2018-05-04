@@ -11,15 +11,15 @@ class DataManager:
         # only use first 10 for training
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0005_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0009_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0011_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0013_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0014_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0015_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0017_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0018_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0005_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0009_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0011_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0013_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0014_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0015_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0017_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0018_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0019_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0020_sync/matches.bin' % (path),
             #'%s/2011_09_26_drive_0022_sync/matches.bin' % (path),
@@ -78,7 +78,7 @@ class DataManager:
 
         self.idx_at = 0
         self.idxs = np.arange(0, count)
-        #np.random.shuffle(self.idxs)
+        np.random.shuffle(self.idxs)
 
         self.reserved = [False,] * self.num_samples
 

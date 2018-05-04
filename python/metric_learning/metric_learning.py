@@ -19,9 +19,7 @@ class MetricLearning:
         self.height = self.dm.height
         self.dim_data = self.width * self.length * self.height
 
-        self.n_classes = sample.n_classes
-
-        self.latent_dim = 25
+        self.latent_dim = 10
 
         self.default_keep_prob = 0.8
 
@@ -29,31 +27,37 @@ class MetricLearning:
         self.occ1    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ1')
         self.occ2    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ2')
 
+        self.filter  = tf.placeholder(tf.int32, shape=[None, self.width, self.length], name='filter')
+
+        self.flow  = tf.placeholder(tf.float32, shape=[None, self.width, self.length, 2], name='flow')
+
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
-
-        self.match       = tf.placeholder(tf.float32, shape=[None,], name='match')
-        self.true_filter = tf.placeholder(tf.int32, shape=[None,], name='true_filter')
 
         # Filter
         self.pred_filter = self.make_filter(self.occ1)
         self.filter_probs = tf.nn.softmax(logits = self.pred_filter)
 
-        # Metric distance loss
-        self.dist, metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.match)
+        # Make filter loss
+        invalid_filter = self.filter < 0
+        masked_filter = tf.where(invalid_filter, tf.zeros_like(self.filter), self.filter)
 
-        # Filter loss
-        filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.true_filter, logits=self.pred_filter)
+        filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=masked_filter,
+                                                                     logits=self.pred_filter)
 
-        correct_filter = tf.equal(self.true_filter, tf.cast(tf.argmax(self.pred_filter, 1), tf.int32))
-        self.filter_accuracy = tf.reduce_mean(tf.cast(correct_filter, tf.float32))
+        masked_filter_loss = tf.where(invalid_filter, tf.zeros_like(filter_loss), filter_loss)
+        total_filter_loss = tf.reduce_sum(masked_filter_loss)
 
-        #self.loss = metric_loss + 1e-3 * filter_loss
-        filter_pass_prob = self.filter_probs[:,1]
-        filtered_metric_loss = tf.multiply(filter_pass_prob, metric_loss)
+        # Filter accuracy
+        ml_filter = tf.argmax(self.pred_filter, 3)
+        correct_filter = tf.equal(self.filter, tf.cast(ml_filter, tf.int32))
 
-        loss_all = filtered_metric_loss + filter_loss
-        self.loss = tf.reduce_mean(loss_all)
+        num_correct = tf.reduce_sum(tf.cast(correct_filter, tf.float32))
+        num_valid = tf.reduce_sum(tf.cast(tf.logical_not(invalid_filter), tf.float32))
+
+        self.filter_accuracy = num_correct / num_valid
+
+        self.loss = total_filter_loss
 
         # Optimizer
         self.opt = tf.train.AdamOptimizer(1e-4)
@@ -65,41 +69,38 @@ class MetricLearning:
         self.sess = tf.Session()
 
         # Summaries
-        metric_loss_sum = tf.summary.scalar('metric distance loss', tf.reduce_mean(metric_loss))
-        filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
+        #metric_loss_sum = tf.summary.scalar('metric distance loss', tf.reduce_mean(metric_loss))
+        #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
 
-        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(filter_loss))
-
+        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(total_filter_loss))
         filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
 
         total_loss_sum = tf.summary.scalar('total loss', self.loss)
 
         self.summaries = tf.summary.merge_all()
 
-
     def make_encoder(self, occ):
         with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
-            flatten = tf.contrib.layers.flatten(occ)
-            flatten_do = tf.nn.dropout(flatten, self.keep_prob)
+            occ_do = tf.nn.dropout(occ, self.keep_prob)
 
-            l1 = tf.contrib.layers.fully_connected(flatten_do, 200, activation_fn = tf.nn.leaky_relu, scope='l1')
+            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9, activation_fn = tf.nn.leaky_relu, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            l2 = tf.contrib.layers.fully_connected(l1_do, 100, activation_fn = tf.nn.leaky_relu, scope='l2')
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l2')
             l2_do = tf.nn.dropout(l2, self.keep_prob)
 
-            l3 = tf.contrib.layers.fully_connected(l2_do, 50, activation_fn = tf.nn.leaky_relu, scope='l3')
+            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l3')
             l3_do = tf.nn.dropout(l3, self.keep_prob)
 
-            latent = tf.contrib.layers.fully_connected(l3_do, self.latent_dim, activation_fn = tf.nn.leaky_relu, scope='latent')
+            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1, activation_fn = tf.nn.leaky_relu, scope='latent')
             latent_do = tf.nn.dropout(latent, self.keep_prob)
 
         return latent_do
 
     def make_filter(self, occ):
-        latent = self.make_encoder(occ)
+        encoding = self.make_encoder(occ)
 
-        output = tf.contrib.layers.fully_connected(latent, 2, activation_fn = tf.nn.leaky_relu, scope="filter")
+        output = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
 
         return output
 
@@ -151,18 +152,18 @@ class MetricLearning:
 
         valid_set = self.dm.validation_set
 
-        fd_valid = { self.occ1: valid_set.occ1,
-                     self.occ2: valid_set.occ2,
-                     self.match: valid_set.match,
-                     self.true_filter: valid_set.filter,
-                     self.keep_prob : 1.0,
+        fd_valid = { self.occ1:        valid_set.occ1,
+                     self.occ2:        valid_set.occ2,
+                     self.filter:      valid_set.filter,
+                     self.flow:        valid_set.flow,
+                     self.keep_prob:   1.0,
                    }
 
         iteration = start_iter
 
-        it_save = 10000
-        it_plot = 10000
-        it_summ = 100
+        it_save = 1
+        it_plot = 1
+        it_summ = 1
 
         t_sum = 0
         t_save = 0
@@ -190,7 +191,7 @@ class MetricLearning:
             if iteration % it_plot == 0:
                 print 'Iteration %d' % (iteration)
 
-                self.make_metric_plot(valid_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_metric_plot(valid_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
                 self.make_filter_plot(valid_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
 
                 print '  Filter accuracy = %5.3f %%' % (100.0 * self.filter_accuracy.eval(session = self.sess, feed_dict = fd_valid))
@@ -208,11 +209,11 @@ class MetricLearning:
             t_data += (toc - tic)
 
             tic = time.time()
-            fd = { self.occ1: samples.occ1,
-                   self.occ2: samples.occ2,
-                   self.match: samples.match,
-                   self.true_filter: samples.filter,
-                   self.keep_prob: self.default_keep_prob,
+            fd = { self.occ1:        samples.occ1,
+                   self.occ2:        samples.occ2,
+                   self.filter:      samples.filter,
+                   self.flow:        samples.flow,
+                   self.keep_prob:   self.default_keep_prob,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -247,10 +248,22 @@ class MetricLearning:
         probs = self.eval_filter_prob(dataset.occ1)
 
         true_label = dataset.filter
-        pred_label = probs[:, 1]
+
+        prob_background = probs[:, :, :, 0]
+        prob_foreground = probs[:, :, :, 1]
+
+        true_label = true_label.flatten()
+        prob_background = prob_background.flatten()
+        prob_foreground = prob_foreground.flatten()
+
+        is_background = (true_label == 0)
+        is_foreground = (true_label == 1)
 
         plt.clf()
-        self.make_pr_curve(true_label, pred_label, 'Filter')
+        self.make_pr_curve(is_background, prob_background, 'Background')
+        self.make_pr_curve(is_foreground, prob_foreground, 'Foreground')
+
+        plt.grid()
 
         if save:
             plt.savefig(save)
@@ -268,12 +281,11 @@ class MetricLearning:
         plt.ylabel('Precision')
         plt.ylim([0.0, 1.05])
         plt.xlim([0.0, 1.0])
-        plt.grid()
         #plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(average_precision))
 
 if __name__ == '__main__':
     dm = DataManager()
-    dm.make_validation(10000)
+    dm.make_validation(100)
 
     validation = dm.validation_set
 
