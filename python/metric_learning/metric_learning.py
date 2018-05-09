@@ -22,6 +22,8 @@ class MetricLearning:
         self.default_keep_prob = 0.8
 
         # Inputs
+        self.occ    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ')
+
         self.occ1    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ1')
         self.occ2    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ2')
 
@@ -32,9 +34,11 @@ class MetricLearning:
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
+        # Encoder
+        self.encoding = self.make_encoder(self.occ)
+
         # Metric distance
-        #metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow)
-        metric_loss = 0
+        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow)
 
         # Filter
         self.pred_filter = self.make_filter(self.occ1)
@@ -42,6 +46,7 @@ class MetricLearning:
 
         # Make filter loss
         invalid_filter = self.filter < 0
+        num_valid = tf.reduce_sum(tf.cast(tf.logical_not(invalid_filter), tf.float32))
 
         masked_filter = tf.where(invalid_filter, tf.zeros_like(self.filter), self.filter)
 
@@ -50,13 +55,13 @@ class MetricLearning:
 
         masked_filter_loss = tf.where(invalid_filter, tf.zeros_like(filter_loss), filter_loss)
         total_filter_loss = tf.reduce_sum(masked_filter_loss)
+        normalized_filter_loss = total_filter_loss / num_valid
 
         # Filter accuracy
         ml_filter = tf.argmax(self.pred_filter, 3)
         correct_filter = tf.equal(self.filter, tf.cast(ml_filter, tf.int32))
 
         num_correct = tf.reduce_sum(tf.cast(correct_filter, tf.float32))
-        num_valid = tf.reduce_sum(tf.cast(tf.logical_not(invalid_filter), tf.float32))
 
         self.filter_accuracy = num_correct / num_valid
 
@@ -73,7 +78,7 @@ class MetricLearning:
         self.fg_accuracy = num_foreground_correct / num_foreground
 
         # Loss
-        self.loss = total_filter_loss + metric_loss
+        self.loss = normalized_filter_loss + metric_loss
 
         # Optimizer
         self.opt = tf.train.AdamOptimizer(1e-4)
@@ -88,7 +93,7 @@ class MetricLearning:
         metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
         #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
 
-        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(total_filter_loss))
+        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(normalized_filter_loss))
         filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
 
         bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
@@ -134,29 +139,27 @@ class MetricLearning:
         total_loss = 0
         count = 0
 
-        min_d = -1
-        max_d = 1
+        ds = [-15, -8, -4, -2, -1, 0, 1, 2, 4, 8, 15]
+        decimation = 2
 
-        for di in range(min_d, max_d+1):
+        for di in ds:
             i0 = -di
             i1 = self.width - di
             i0 = np.clip(i0, a_min=0, a_max=None)
             i1 = np.clip(i1, a_min=None, a_max=self.width)
 
-            for dj in range(min_d, max_d+1):
+            for dj in ds:
                 j0 = -dj
                 j1 = self.length - dj
                 j0 = np.clip(j0, a_min=0, a_max=None)
                 j1 = np.clip(j1, a_min=None, a_max=self.length)
 
-                count += (i1 - i0) * (j1 - j0)
-
-                l1 = latent1[:, i0:i1, j0:j1, :]
-                l2 = latent2[:, (i0+di):(i1+di), (j0+dj):(j1+dj), :]
+                l1 = latent1[:, i0:i1:decimation, j0:j1:decimation, :]
+                l2 = latent2[:, (i0+di):(i1+di):decimation, (j0+dj):(j1+dj):decimation, :]
                 dist_latent = tf.reduce_sum(tf.squared_difference(l1, l2), axis=3, name='dist_%d_%d' % (di, dj))
 
-                err_x = true_flow[:, i0:i1, j0:j1, 0] - di
-                err_y = true_flow[:, i0:i1, j0:j1, 1] - dj
+                err_x = true_flow[:, i0:i1:decimation, j0:j1:decimation, 0] - di
+                err_y = true_flow[:, i0:i1:decimation, j0:j1:decimation, 1] - dj
                 err2 = tf.multiply(err_x, err_x) + tf.multiply(err_y, err_y)
 
                 print 'Dist shape'
@@ -166,24 +169,19 @@ class MetricLearning:
                 print 'Err shape'
                 print err2.shape
 
-                c = tf.clip_by_value(err2 - 1.0, -1, 3)
+                norm_err2 = tf.clip_by_value(err2 - 1.0, -1, 3)
+                val = norm_err2 * dist_latent
 
-                exponent = tf.multiply(c, dist_latent)
+                total_loss += tf.reduce_sum(tf.sigmoid(val))
+                count += tf.size(val)
 
-                print 'Exponent shape'
-                print exponent.shape
+        return total_loss / tf.cast(count, tf.float32)
 
-                total_loss += tf.reduce_sum(tf.exp(exponent))
+    def eval_encoder(self, occ):
+        fd = {self.occ: occ, self.keep_prob: 1}
+        encoding = self.encoding.eval(session = self.sess, feed_dict = fd)
 
-        print 'Have %d total samples' % (count)
-
-        return total_loss
-
-    def eval_dist(self, occ1, occ2):
-        fd = {self.occ1: occ1, self.occ2: occ2, self.keep_prob: 1}
-        dist = self.dist.eval(session = self.sess, feed_dict = fd)
-
-        return dist
+        return encoding
 
     def eval_filter_prob(self, occ):
         if len(occ.shape) == 3:
@@ -221,7 +219,8 @@ class MetricLearning:
 
         it_save = 1000
         it_plot = 1000
-        it_summ = 1000
+        it_summ = 100
+        it_stat = 100
 
         t_sum = 0
         t_save = 0
@@ -237,7 +236,7 @@ class MetricLearning:
                 self.writer.add_summary(summary, iteration)
                 toc = time.time()
 
-                #print '\tTook %5.3f sec to generate summaries' % (toc - tic)
+                print '\tTook %5.3f sec to generate summaries' % (toc - tic)
 
             if iteration % it_save == 0:
                 tic = time.time()
@@ -247,25 +246,29 @@ class MetricLearning:
                 #print '\tTook %5.3f sec to save checkpoint' % (toc - tic)
 
             if iteration % it_plot == 0:
-                print 'Iteration %d' % (iteration)
-
-                #self.make_metric_plot(valid_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                tic = time.time()
+                self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
                 self.make_filter_plot(self.validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
+                toc = time.time()
 
+                print '\tTook %5.3f sec to make plots' % (toc - tic)
+
+
+            if iteration % it_stat == 0 and iteration > 0:
                 tot_acc, bg_acc, fg_acc = self.sess.run([self.filter_accuracy, self.bg_accuracy, self.fg_accuracy], feed_dict = fd_valid)
 
+                print 'Iteration %d' % (iteration)
                 print '  Filter accuracy = %5.3f %%' % (100.0 * tot_acc)
                 print '      BG accuracy = %5.3f %%' % (100.0 * bg_acc)
                 print '      FG accuracy = %5.3f %%' % (100.0 * fg_acc)
-
-                if iteration > 0:
-                    print '  Loading data at %5.3f ms / iteration' % (t_data*1000.0/it_plot)
-                    print '  Training at %5.3f ms / iteration' % (t_train*1000.0/it_plot)
-
-                    t_data = 0
-                    t_train = 0
-
                 print ''
+                print '  Loading data at %5.3f ms / iteration' % (t_data*1000.0/it_stat)
+                print '  Training at %5.3f ms / iteration' % (t_train*1000.0/it_stat)
+                print ''
+
+                t_data = 0
+                t_train = 0
+
 
             tic = time.time()
             samples = batch_manager.get_next_batch()
@@ -290,6 +293,15 @@ class MetricLearning:
     def make_metric_plot(self, dataset, save=None, show=False):
         distances = self.eval_dist(dataset.occ1, dataset.occ2)
         probs = self.eval_filter_prob(dataset.occ1)
+
+        encodings1 = self.eval_encoding(dataset.occ1)
+        encodings2 = self.eval_encoding(dataset.occ2)
+
+        n = encodings1.shape[0]
+
+        for i in n:
+            e1 = encodings1[i, :, :, :]
+            e2 = encodings2[i, :, :, :]
 
         plt.clf()
 
