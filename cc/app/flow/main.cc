@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   app->ProcessNext();
 
   // Now we're ready to start
-  printf("Ready...\n");
+  printf("Ready...\n\n");
   viewer->Start();
 
   return 0;
