@@ -128,6 +128,8 @@ class MetricLearning:
         return dist
 
     def eval_filter_prob(self, occ):
+        if len(occ.shape) == 3:
+            occ = np.expand_dims(occ, 0)
         fd = {self.occ1: occ, self.keep_prob: 1}
 
         probs = self.filter_probs.eval(session = self.sess, feed_dict = fd)

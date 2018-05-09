@@ -75,7 +75,7 @@ void NodeManager::UpdateViewer() {
     //car_node_->Render(true);
   } else if (view_mode_ == 3) {
     pc1_->Render(false);
-    pc2_->Render(false);
+    pc2_->Render(true);
 
     tn1_->Render(false);
     tn2_->Render(false);

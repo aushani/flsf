@@ -35,14 +35,6 @@ saver.restore(sess, tf.train.latest_checkpoint(model_dir))
 graph = tf.get_default_graph()
 
 var_names = [
-#'Decoder/l1/biases',
-#'Decoder/l1/weights',
-#'Decoder/l2/biases',
-#'Decoder/l2/weights',
-#'Decoder/l3/biases',
-#'Decoder/l3/weights',
-#'Decoder/output/biases',
-#'Decoder/output/weights',
 'Encoder/l1/biases',
 'Encoder/l1/weights',
 'Encoder/l2/biases',
@@ -51,20 +43,32 @@ var_names = [
 'Encoder/l3/weights',
 'Encoder/latent/biases',
 'Encoder/latent/weights',
-#'classifier/biases',
-#'classifier/weights',
 'filter/biases',
 'filter/weights',
 ]
+
+dim_file = open('%s/dim.dat' % out_dir, 'w')
 
 for var_name in var_names:
     print var_name
     var = graph.get_tensor_by_name(var_name + ":0")
     print var.shape
     var_val = var.eval(session=sess)
+    var_val = var_val.flatten()
+    print var_val.shape
 
     #if var_name is "Encoder/l1/weights":
     #    print var_val[0, 0]
 
     fn = out_dir + '/' + var_name.replace('/', '_') + '.dat'
     np.savetxt(fn, var_val, delimiter=' ')
+
+    shape = var.shape
+    shape_str = ''
+    for s in shape:
+        shape_str += '%d ' % (s)
+    shape_str += '\n'
+
+    dim_file.write(shape_str)
+
+dim_file.close()

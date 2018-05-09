@@ -45,7 +45,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
   float denom = exp(s1) + exp(s2);
   float p_filter = exp(s1)/denom;
 
-  if (p_filter < 0.5) {
+  if (p_filter > 0.8) {
     flow_est(i_from, j_from, 0) = 0;
     flow_est(i_from, j_from, 1) = 0;
 
@@ -221,7 +221,7 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   float denom = exp(s1) + exp(s2);
   float p_filter = exp(s1)/denom;
 
-  if (p_filter < 0.5) {
+  if (p_filter > 0.8) {
     flow_est(i, j, 0) = 0;
     flow_est(i, j, 1) = 0;
 

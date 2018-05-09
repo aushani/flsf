@@ -54,6 +54,7 @@ class Network {
       ConvolutionalLayer &clc);
 
   static std::vector<float> LoadFile(const fs::path &path);
+  static std::vector<int> LoadDimFile(const fs::path &path);
 };
 
 } // namespace tf

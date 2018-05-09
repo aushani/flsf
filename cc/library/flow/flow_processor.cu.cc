@@ -25,8 +25,8 @@ struct DeviceData {
    network(tf::Network::LoadNetwork(data_path)),
    distance_computer(),
    solver(167, 167, 31),                  // XXX magic numbers
-   last_encoding1(167, 167, 25),          // XXX magic numbers
-   last_encoding2(167, 167, 25),          // XXX magic numbers
+   last_encoding1(167, 167, 10),          // XXX magic numbers
+   last_encoding2(167, 167, 10),          // XXX magic numbers
    distance(167, 167, 31, 31),            // XXX magic numbers
    filter(167, 167, 2),                   // XXX magic numbers
    //classification_map(167, 167, res),   // XXX magic numbers

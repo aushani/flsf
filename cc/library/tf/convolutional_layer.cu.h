@@ -11,6 +11,8 @@ class ConvolutionalLayer {
  public:
   ConvolutionalLayer(const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases);
 
+  int GetOutputLayers() const;
+
   void Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output);
 
   static constexpr int kMaxOutputs = 200;

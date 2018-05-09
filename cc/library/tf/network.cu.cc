@@ -2,6 +2,10 @@
 
 #include <boost/assert.hpp>
 
+#include "library/params/params.h"
+
+namespace ps = library::params;
+
 namespace library {
 namespace tf {
 
@@ -16,13 +20,12 @@ Network::Network(const ConvolutionalLayer &l1,
  clatent_(latent),
  //cl_classifier_(clc),
  cl_filter_(cl_filter),
- input_(167, 167, 12),
- res_cl1_(167, 167, 200),
- res_cl2_(167, 167, 100),
- res_cl3_(167, 167, 50),
- res_clatent_(167, 167, 25),
- //res_classifier_(167, 167, 8),
- res_filter_(167, 167, 2) {
+ input_(167, 167, 13),
+ res_cl1_(167, 167, l1.GetOutputLayers()),
+ res_cl2_(167, 167, l2.GetOutputLayers()),
+ res_cl3_(167, 167, l3.GetOutputLayers()),
+ res_clatent_(167, 167, latent.GetOutputLayers()),
+ res_filter_(167, 167, cl_filter.GetOutputLayers()) {
   input_.SetCoalesceDim(0);
   res_cl1_.SetCoalesceDim(0);
   res_cl2_.SetCoalesceDim(0);
@@ -48,7 +51,8 @@ __global__ void SetUnknown(gu::GpuData<3, float> dense) {
 }
 
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
-    gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense) {
+    gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense,
+    const int i0, const int i1, const int j0, const int j1, const int k0, const int k1) {
   // Figure out which hit this thread is processing
   const int bidx = blockIdx.x;
   const int tidx = threadIdx.x;
@@ -63,23 +67,28 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
   float lo = log_odds(idx);
   float p = 1.0 / (1.0 + expf(-lo));
 
-  int i = loc.i + dense.GetDim(0)/2;
-  int j = loc.j + dense.GetDim(1)/2;
-  int k = loc.k + dense.GetDim(2)/2;
+  int i = loc.i;
+  int j = loc.j;
+  int k = loc.k;
 
-  if (i < 0 || i >= dense.GetDim(0)) {
+  if (i < i0 || i >= i1) {
     return;
   }
 
-  if (j < 0 || j >= dense.GetDim(1)) {
+  if (j < j0 || j >= j1) {
     return;
   }
 
-  if (k < 0 || k >= dense.GetDim(2)) {
+  if (k < k0 || k >= k1) {
     return;
   }
+
+  i -= i0;
+  j -= j0;
+  k -= k0;
 
   float val = p - 0.5;
+  //float val = p;
 
   dense(i, j, k) = val;
 }
@@ -106,7 +115,10 @@ void Network::SetInput(const rt::OccGrid &og) {
     // Copy over
     threads = 1024;
     blocks = std::ceil(static_cast<float>(sz)/threads);
-    CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
+    CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_,
+                                    ps::kOccGridMinXY, ps::kOccGridMaxXY,
+                                    ps::kOccGridMinXY, ps::kOccGridMaxXY,
+                                    ps::kOccGridMinZ, ps::kOccGridMaxZ);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }
@@ -149,26 +161,38 @@ std::vector<float> Network::LoadFile(const fs::path &path) {
   return data;
 }
 
+std::vector<int> Network::LoadDimFile(const fs::path &path) {
+  std::vector<int> data;
+
+  std::ifstream file(path.string());
+
+  int val;
+  while (file >> val) {
+    data.push_back(val);
+  }
+
+  return data;
+}
+
 Network Network::LoadNetwork(const fs::path &path) {
   printf("Loading from path: %s\n", path.c_str());
 
-  gu::GpuData<4, float> l1_weights(7, 7, 12, 200);
-  gu::GpuData<1, float> l1_biases(200);
+  std::vector<int> dim = LoadDimFile(path / "dim.dat");
 
-  gu::GpuData<4, float> l2_weights(1, 1, 200, 100);
-  gu::GpuData<1, float> l2_biases(100);
+  gu::GpuData<1, float> l1_biases(dim[0]);
+  gu::GpuData<4, float> l1_weights(dim[1], dim[2], dim[3], dim[4]);
 
-  gu::GpuData<4, float> l3_weights(1, 1, 100, 50);
-  gu::GpuData<1, float> l3_biases(50);
+  gu::GpuData<1, float> l2_biases(dim[5]);
+  gu::GpuData<4, float> l2_weights(dim[6], dim[7], dim[8], dim[9]);
 
-  gu::GpuData<4, float> latent_weights(1, 1, 50, 25);
-  gu::GpuData<1, float> latent_biases(25);
+  gu::GpuData<1, float> l3_biases(dim[10]);
+  gu::GpuData<4, float> l3_weights(dim[11], dim[12], dim[13], dim[14]);
 
-  //gu::GpuData<4, float> classifier_weights(1, 1, 25, 8);
-  //gu::GpuData<1, float> classifier_biases(8);
+  gu::GpuData<1, float> latent_biases(dim[15]);
+  gu::GpuData<4, float> latent_weights(dim[16], dim[17], dim[18], dim[19]);
 
-  gu::GpuData<4, float> filter_weights(1, 1, 25, 2);
-  gu::GpuData<1, float> filter_biases(2);
+  gu::GpuData<1, float> filter_biases(dim[20]);
+  gu::GpuData<4, float> filter_weights(dim[21], dim[22], dim[23], dim[24]);
 
   l1_weights.CopyFrom(Network::LoadFile(path / "Encoder_l1_weights.dat"));
   l1_biases.CopyFrom(Network::LoadFile(path / "Encoder_l1_biases.dat"));
@@ -181,9 +205,6 @@ Network Network::LoadNetwork(const fs::path &path) {
 
   latent_weights.CopyFrom(Network::LoadFile(path / "Encoder_latent_weights.dat"));
   latent_biases.CopyFrom(Network::LoadFile(path / "Encoder_latent_biases.dat"));
-
-  //classifier_weights.CopyFrom(Network::LoadFile(path / "classifier_weights.dat"));
-  //classifier_biases.CopyFrom(Network::LoadFile(path / "classifier_biases.dat"));
 
   filter_weights.CopyFrom(Network::LoadFile(path / "filter_weights.dat"));
   filter_biases.CopyFrom(Network::LoadFile(path / "filter_biases.dat"));
