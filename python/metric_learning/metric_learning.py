@@ -1,23 +1,21 @@
 import tensorflow as tf
 from data import *
+from batch_manager import *
 import time
 import sample
 import sys
 
-plt.switch_backend('agg')
-
 class MetricLearning:
 
     def __init__(self, data_manager, exp_name="exp"):
-
-        self.dm = data_manager
-
         self.exp_name = exp_name
 
-        self.width = self.dm.width
-        self.length = self.dm.length
-        self.height = self.dm.height
+        self.width  = data_manager.width
+        self.length = data_manager.length
+        self.height = data_manager.height
         self.dim_data = self.width * self.length * self.height
+
+        self.validation_set = data_manager.validation_set
 
         self.latent_dim = 10
 
@@ -34,12 +32,17 @@ class MetricLearning:
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
+        # Metric distance
+        #metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow)
+        metric_loss = 0
+
         # Filter
         self.pred_filter = self.make_filter(self.occ1)
         self.filter_probs = tf.nn.softmax(logits = self.pred_filter)
 
         # Make filter loss
         invalid_filter = self.filter < 0
+
         masked_filter = tf.where(invalid_filter, tf.zeros_like(self.filter), self.filter)
 
         filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=masked_filter,
@@ -57,7 +60,20 @@ class MetricLearning:
 
         self.filter_accuracy = num_correct / num_valid
 
-        self.loss = total_filter_loss
+        is_background = tf.equal(self.filter, 0)
+        correct_background = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 0), is_background)
+        num_background = tf.reduce_sum(tf.cast(is_background, tf.float32))
+        num_background_correct = tf.reduce_sum(tf.cast(correct_background, tf.float32))
+        self.bg_accuracy = num_background_correct / num_background
+
+        is_foreground = tf.equal(self.filter, 1)
+        correct_foreground = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 1), is_foreground)
+        num_foreground = tf.reduce_sum(tf.cast(is_foreground, tf.float32))
+        num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
+        self.fg_accuracy = num_foreground_correct / num_foreground
+
+        # Loss
+        self.loss = total_filter_loss + metric_loss
 
         # Optimizer
         self.opt = tf.train.AdamOptimizer(1e-4)
@@ -69,11 +85,14 @@ class MetricLearning:
         self.sess = tf.Session()
 
         # Summaries
-        #metric_loss_sum = tf.summary.scalar('metric distance loss', tf.reduce_mean(metric_loss))
+        metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
         #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
 
         filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(total_filter_loss))
         filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
+
+        bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
+        fg_acc_sum = tf.summary.scalar('filter accuracy foreground', self.fg_accuracy)
 
         total_loss_sum = tf.summary.scalar('total loss', self.loss)
 
@@ -104,22 +123,61 @@ class MetricLearning:
 
         return output
 
-    def make_metric_distance(self, occ1, occ2, match):
+    def make_metric_distance(self, occ1, occ2, true_flow):
         latent1 = self.make_encoder(occ1)
         latent2 = self.make_encoder(occ2)
 
-        dist = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
+        print 'Latent encodings'
+        print latent1.shape
+        print latent2.shape
 
-        #loss = match * tf.nn.sigmoid(dist) + (1 - match) * tf.nn.sigmoid(-dist)
-        #loss = match * dist + (1 - match) *(-dist)
+        total_loss = 0
+        count = 0
 
-        match_loss = tf.nn.sigmoid(dist - 10)
-        not_match_loss = 1 - tf.nn.sigmoid(dist - 10)
+        min_d = -1
+        max_d = 1
 
-        loss = match * match_loss + (1 - match) * not_match_loss
+        for di in range(min_d, max_d+1):
+            i0 = -di
+            i1 = self.width - di
+            i0 = np.clip(i0, a_min=0, a_max=None)
+            i1 = np.clip(i1, a_min=None, a_max=self.width)
 
-        #return dist, tf.reduce_mean(loss)
-        return dist, loss
+            for dj in range(min_d, max_d+1):
+                j0 = -dj
+                j1 = self.length - dj
+                j0 = np.clip(j0, a_min=0, a_max=None)
+                j1 = np.clip(j1, a_min=None, a_max=self.length)
+
+                count += (i1 - i0) * (j1 - j0)
+
+                l1 = latent1[:, i0:i1, j0:j1, :]
+                l2 = latent2[:, (i0+di):(i1+di), (j0+dj):(j1+dj), :]
+                dist_latent = tf.reduce_sum(tf.squared_difference(l1, l2), axis=3, name='dist_%d_%d' % (di, dj))
+
+                err_x = true_flow[:, i0:i1, j0:j1, 0] - di
+                err_y = true_flow[:, i0:i1, j0:j1, 1] - dj
+                err2 = tf.multiply(err_x, err_x) + tf.multiply(err_y, err_y)
+
+                print 'Dist shape'
+                print dist_latent.shape
+                print dist_latent
+
+                print 'Err shape'
+                print err2.shape
+
+                c = tf.clip_by_value(err2 - 1.0, -1, 3)
+
+                exponent = tf.multiply(c, dist_latent)
+
+                print 'Exponent shape'
+                print exponent.shape
+
+                total_loss += tf.reduce_sum(tf.exp(exponent))
+
+        print 'Have %d total samples' % (count)
+
+        return total_loss
 
     def eval_dist(self, occ1, occ2):
         fd = {self.occ1: occ1, self.occ2: occ2, self.keep_prob: 1}
@@ -141,7 +199,7 @@ class MetricLearning:
         saver.restore(self.sess, filename)
         print 'Restored model from', filename
 
-    def train(self, start_iter = 0):
+    def train(self, batch_manager, start_iter = 0):
         if start_iter == 0:
             # Initialize variables
             self.sess.run(tf.global_variables_initializer())
@@ -152,20 +210,18 @@ class MetricLearning:
         # Save checkpoints
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
 
-        valid_set = self.dm.validation_set
-
-        fd_valid = { self.occ1:        valid_set.occ1,
-                     self.occ2:        valid_set.occ2,
-                     self.filter:      valid_set.filter,
-                     self.flow:        valid_set.flow,
+        fd_valid = { self.occ1:        self.validation_set.occ1,
+                     self.occ2:        self.validation_set.occ2,
+                     self.filter:      self.validation_set.filter,
+                     self.flow:        self.validation_set.flow,
                      self.keep_prob:   1.0,
                    }
 
         iteration = start_iter
 
-        it_save = 1
-        it_plot = 1
-        it_summ = 1
+        it_save = 1000
+        it_plot = 1000
+        it_summ = 1000
 
         t_sum = 0
         t_save = 0
@@ -194,18 +250,25 @@ class MetricLearning:
                 print 'Iteration %d' % (iteration)
 
                 #self.make_metric_plot(valid_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
-                self.make_filter_plot(valid_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_filter_plot(self.validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
 
-                print '  Filter accuracy = %5.3f %%' % (100.0 * self.filter_accuracy.eval(session = self.sess, feed_dict = fd_valid))
+                tot_acc, bg_acc, fg_acc = self.sess.run([self.filter_accuracy, self.bg_accuracy, self.fg_accuracy], feed_dict = fd_valid)
+
+                print '  Filter accuracy = %5.3f %%' % (100.0 * tot_acc)
+                print '      BG accuracy = %5.3f %%' % (100.0 * bg_acc)
+                print '      FG accuracy = %5.3f %%' % (100.0 * fg_acc)
 
                 if iteration > 0:
-                    print '  Loading data at %5.3f ms / iteration' % (t_data*1000.0/iteration)
-                    print '  Training at %5.3f ms / iteration' % (t_train*1000.0/iteration)
+                    print '  Loading data at %5.3f ms / iteration' % (t_data*1000.0/it_plot)
+                    print '  Training at %5.3f ms / iteration' % (t_train*1000.0/it_plot)
+
+                    t_data = 0
+                    t_train = 0
 
                 print ''
 
             tic = time.time()
-            samples = self.dm.get_next_samples(1)
+            samples = batch_manager.get_next_batch()
             toc = time.time()
 
             t_data += (toc - tic)
@@ -261,9 +324,11 @@ class MetricLearning:
         is_background = (true_label == 0)
         is_foreground = (true_label == 1)
 
+        valid = np.logical_or(is_background, is_foreground)
+
         plt.clf()
-        self.make_pr_curve(is_background, prob_background, 'Background')
-        self.make_pr_curve(is_foreground, prob_foreground, 'Foreground')
+        self.make_pr_curve(is_background[valid], prob_background[valid], 'Background')
+        self.make_pr_curve(is_foreground[valid], prob_foreground[valid], 'Foreground')
 
         plt.grid()
 
@@ -286,18 +351,20 @@ class MetricLearning:
         #plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(average_precision))
 
 if __name__ == '__main__':
+    plt.switch_backend('agg')
+
     dm = DataManager()
     dm.make_validation(100)
 
-    validation = dm.validation_set
-
     ml = MetricLearning(dm)
+
+    bm = BatchManager(dm)
 
     if len(sys.argv) > 1:
         load_iter = int(sys.argv[1])
         print 'Loading from iteration %d' % (load_iter)
 
         ml.restore('model.ckpt-%d' % (load_iter))
-        ml.train(start_iter = load_iter+1)
+        ml.train(bm, start_iter = load_iter+1)
     else:
-        ml.train()
+        ml.train(bm)

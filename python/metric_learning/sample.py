@@ -7,11 +7,13 @@ class Sample:
         self.length = 167
         self.height = 13
 
+        self.resolution = 0.3
+
         self.occ1 = data['occ1'].reshape((self.width, self.length, self.height))
         self.occ2 = data['occ2'].reshape((self.width, self.length, self.height))
 
         self.filter = data['filter'].reshape((self.width, self.length))
-        self.flow = data['flow'].reshape((self.width, self.length, 2))
+        self.flow = data['flow'].reshape((self.width, self.length, 2)) / self.resolution
 
         # Rescale range from 0-1 to -0.5 - +0.5
         self.occ1 -= 0.5
