@@ -35,13 +35,63 @@ class MetricLearning:
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
         # Encoder
-        self.encoding = self.make_encoder(self.occ)
+        self.encoding = self.get_encoding(self.occ)
 
         # Metric distance
-        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow)
+        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow, self.filter)
 
         # Filter
-        self.pred_filter = self.make_filter(self.occ1)
+        self.make_filter(self.occ1)
+
+        # Loss
+        self.loss = self.normalized_filter_loss + metric_loss
+
+        # Optimizer
+        self.opt = tf.train.AdamOptimizer(1e-4)
+
+        var_list = tf.trainable_variables()
+        self.train_step = self.opt.minimize(self.loss,  var_list = var_list)
+
+        # Session
+        self.sess = tf.Session()
+
+        # Summaries
+        metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
+        #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
+
+        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(self.normalized_filter_loss))
+        filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
+
+        bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
+        fg_acc_sum = tf.summary.scalar('filter accuracy foreground', self.fg_accuracy)
+
+        total_loss_sum = tf.summary.scalar('total loss', self.loss)
+
+        self.summaries = tf.summary.merge_all()
+
+    def get_encoding(self, occ):
+        with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
+            occ_do = tf.nn.dropout(occ, self.keep_prob)
+
+            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9, activation_fn = tf.nn.leaky_relu, scope='l1')
+            l1_do = tf.nn.dropout(l1, self.keep_prob)
+
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l2')
+            l2_do = tf.nn.dropout(l2, self.keep_prob)
+
+            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l3')
+            l3_do = tf.nn.dropout(l3, self.keep_prob)
+
+            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1, activation_fn = tf.nn.leaky_relu, scope='latent')
+            latent_do = tf.nn.dropout(latent, self.keep_prob)
+
+        return latent_do
+
+    def make_filter(self, occ):
+        encoding = self.get_encoding(occ)
+
+        self.pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
+
         self.filter_probs = tf.nn.softmax(logits = self.pred_filter)
 
         # Make filter loss
@@ -55,7 +105,7 @@ class MetricLearning:
 
         masked_filter_loss = tf.where(invalid_filter, tf.zeros_like(filter_loss), filter_loss)
         total_filter_loss = tf.reduce_sum(masked_filter_loss)
-        normalized_filter_loss = total_filter_loss / num_valid
+        self.normalized_filter_loss = total_filter_loss / num_valid
 
         # Filter accuracy
         ml_filter = tf.argmax(self.pred_filter, 3)
@@ -77,60 +127,12 @@ class MetricLearning:
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
         self.fg_accuracy = num_foreground_correct / num_foreground
 
-        # Loss
-        self.loss = normalized_filter_loss + metric_loss
+    def make_metric_distance(self, occ1, occ2, true_flow, true_filter):
+        latent1 = self.get_encoding(occ1)
+        latent2 = self.get_encoding(occ2)
 
-        # Optimizer
-        self.opt = tf.train.AdamOptimizer(1e-4)
-
-        var_list = tf.trainable_variables()
-        self.train_step = self.opt.minimize(self.loss,  var_list = var_list)
-
-        # Session
-        self.sess = tf.Session()
-
-        # Summaries
-        metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
-        #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
-
-        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(normalized_filter_loss))
-        filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
-
-        bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
-        fg_acc_sum = tf.summary.scalar('filter accuracy foreground', self.fg_accuracy)
-
-        total_loss_sum = tf.summary.scalar('total loss', self.loss)
-
-        self.summaries = tf.summary.merge_all()
-
-    def make_encoder(self, occ):
-        with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
-            occ_do = tf.nn.dropout(occ, self.keep_prob)
-
-            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9, activation_fn = tf.nn.leaky_relu, scope='l1')
-            l1_do = tf.nn.dropout(l1, self.keep_prob)
-
-            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l2')
-            l2_do = tf.nn.dropout(l2, self.keep_prob)
-
-            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l3')
-            l3_do = tf.nn.dropout(l3, self.keep_prob)
-
-            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1, activation_fn = tf.nn.leaky_relu, scope='latent')
-            latent_do = tf.nn.dropout(latent, self.keep_prob)
-
-        return latent_do
-
-    def make_filter(self, occ):
-        encoding = self.make_encoder(occ)
-
-        output = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
-
-        return output
-
-    def make_metric_distance(self, occ1, occ2, true_flow):
-        latent1 = self.make_encoder(occ1)
-        latent2 = self.make_encoder(occ2)
+        invalid_filter = self.filter < 0
+        valid_filter = tf.cast(tf.logical_not(invalid_filter), tf.float32)
 
         print 'Latent encodings'
         print latent1.shape
@@ -162,18 +164,24 @@ class MetricLearning:
                 err_y = true_flow[:, i0:i1:decimation, j0:j1:decimation, 1] - dj
                 err2 = tf.multiply(err_x, err_x) + tf.multiply(err_y, err_y)
 
-                print 'Dist shape'
-                print dist_latent.shape
-                print dist_latent
+                vf = valid_filter[:, i0:i1:decimation, j0:j1:decimation]
 
-                print 'Err shape'
-                print err2.shape
+                #print 'Dist shape'
+                #print dist_latent.shape
+                #print dist_latent
+
+                #print 'Err shape'
+                #print err2.shape
 
                 norm_err2 = tf.clip_by_value(err2 - 1.0, -1, 3)
                 val = norm_err2 * dist_latent
 
-                total_loss += tf.reduce_sum(tf.sigmoid(val))
-                count += tf.size(val)
+                #print 'Val shape'
+                #print val.shape
+                #print vf.shape
+
+                total_loss += tf.reduce_sum(vf*tf.sigmoid(val))
+                count += tf.reduce_sum(val)
 
         return total_loss / tf.cast(count, tf.float32)
 
@@ -220,7 +228,7 @@ class MetricLearning:
         it_save = 1000
         it_plot = 1000
         it_summ = 100
-        it_stat = 100
+        it_stat = 1000
 
         t_sum = 0
         t_save = 0
@@ -247,7 +255,7 @@ class MetricLearning:
 
             if iteration % it_plot == 0:
                 tic = time.time()
-                self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
                 self.make_filter_plot(self.validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
                 toc = time.time()
 
@@ -291,9 +299,6 @@ class MetricLearning:
             iteration += 1
 
     def make_metric_plot(self, dataset, save=None, show=False):
-        distances = self.eval_dist(dataset.occ1, dataset.occ2)
-        probs = self.eval_filter_prob(dataset.occ1)
-
         encodings1 = self.eval_encoding(dataset.occ1)
         encodings2 = self.eval_encoding(dataset.occ2)
 
@@ -302,6 +307,8 @@ class MetricLearning:
         for i in n:
             e1 = encodings1[i, :, :, :]
             e2 = encodings2[i, :, :, :]
+
+            f1 = dataset.filter[i, :, :]
 
         plt.clf()
 
@@ -366,7 +373,7 @@ if __name__ == '__main__':
     plt.switch_backend('agg')
 
     dm = DataManager()
-    dm.make_validation(100)
+    dm.make_validation(50)
 
     ml = MetricLearning(dm)
 

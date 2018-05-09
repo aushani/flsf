@@ -139,39 +139,36 @@ class DataManager:
 
 if __name__ == '__main__':
     d = DataManager()
-    #d.make_validation(100)
 
-    #valid_set = d.validation_set
+    while True:
+        sample = d.get_next_sample(augment = False)
 
-    sample = d.get_next_sample(augment = False)
-    sample = d.get_next_sample(augment = False)
-    sample = d.get_next_sample(augment = False)
-    sample = d.get_next_sample(augment = False)
-    sample = d.get_next_sample(augment = False)
+        print 'occ1', np.min(sample.occ1[:]), np.max(sample.occ1[:])
+        print 'occ2', np.min(sample.occ2[:]), np.max(sample.occ2[:])
 
-    print 'occ1', np.min(sample.occ1[:]), np.max(sample.occ1[:])
-    print 'occ2', np.min(sample.occ2[:]), np.max(sample.occ2[:])
+        print 'filter', np.min(sample.filter[:]), np.max(sample.filter[:])
 
-    print 'filter', np.min(sample.filter[:]), np.max(sample.filter[:])
+        flow_i = sample.flow[:, :, 0]
+        flow_j = sample.flow[:, :, 1]
 
-    flow_i = sample.flow[:, :, 0]
-    flow_j = sample.flow[:, :, 1]
+        print 'flow i', np.min(flow_i[:]), np.max(flow_i[:])
+        print 'flow j', np.min(flow_j[:]), np.max(flow_j[:])
 
-    print 'flow i', np.min(flow_i[:]), np.max(flow_i[:])
-    print 'flow j', np.min(flow_j[:]), np.max(flow_j[:])
+        plt.clf()
 
-    plt.clf()
+        plt.subplot(3, 1, 1)
+        plt.pcolor(sample.filter)
+        plt.colorbar()
+        plt.title('Filter')
 
-    plt.subplot(3, 1, 1)
-    plt.pcolor(sample.filter)
-    plt.colorbar()
+        plt.subplot(3, 1, 2)
+        plt.pcolor(flow_i)
+        plt.colorbar()
+        plt.title('Flow i')
 
-    plt.subplot(3, 1, 2)
-    plt.pcolor(flow_i)
-    plt.colorbar()
+        plt.subplot(3, 1, 3)
+        plt.pcolor(flow_j)
+        plt.colorbar()
+        plt.title('Flow j')
 
-    plt.subplot(3, 1, 3)
-    plt.pcolor(flow_j)
-    plt.colorbar()
-
-    plt.show()
+        plt.show()
