@@ -8,6 +8,7 @@
 #include "library/gpu_util/host_data.cu.h"
 #include "library/kitti/object_class.h"
 #include "library/params/params.h"
+#include "library/timer/timer.h"
 
 #include "library/flow/metric_distance.cu.h"
 #include "library/flow/solver.cu.h"
@@ -99,12 +100,21 @@ void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
 }
 
 void FlowProcessor::Update(const kt::VelodyneScan &scan) {
+  library::timer::Timer t;
+
   // Get occ grid
+  t.Start();
   auto og = data_->og_builder.GenerateOccGrid(scan.GetHits());
+  printf("Took %5.3f ms to generate occ grid\n", t.GetMs());
 
   // Run encoding network
+  t.Start();
   data_->network.SetInput(og);
+  printf("Took %5.3f ms to set occ grid input to network\n", t.GetMs());
+
+  t.Start();
   data_->network.Apply();
+  printf("Took %5.3f ms to apply network\n", t.GetMs());
 
   // Get encoding
   const auto &encoding = data_->network.GetEncoding();
