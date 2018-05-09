@@ -181,15 +181,15 @@ class MetricLearning:
                 #print val.shape
                 #print vf.shape
 
-                loss = vf*tf.sigmoid(val)
-                # TODO scale according to fp bg
+                scale = vf * fp_bg
+                loss = scale*tf.sigmoid(val)
 
                 total_loss += tf.reduce_sum(loss)
-                count += tf.reduce_sum(vf)
+                count += tf.reduce_sum(scale)
 
         return total_loss / tf.cast(count, tf.float32)
 
-    def eval_encoder(self, occ):
+    def eval_encoding(self, occ):
         fd = {self.occ: occ, self.keep_prob: 1}
         encoding = self.encoding.eval(session = self.sess, feed_dict = fd)
 
@@ -259,7 +259,7 @@ class MetricLearning:
 
             if iteration % it_plot == 0:
                 tic = time.time()
-                #self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
                 self.make_filter_plot(self.validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
                 toc = time.time()
 
@@ -308,26 +308,59 @@ class MetricLearning:
 
         n = encodings1.shape[0]
 
-        for i in n:
-            e1 = encodings1[i, :, :, :]
-            e2 = encodings2[i, :, :, :]
+        dists = []
+        matchs = []
 
-            f1 = dataset.filter[i, :, :]
+        for sample_i in range(n):
+            e1 = encodings1[sample_i, :, :, :]
+            e2 = encodings2[sample_i, :, :, :]
+
+            flow = dataset.flow[sample_i, :, :, :]
+
+            f1 = dataset.filter[sample_i, :, :]
+
+            idxs = np.nonzero(f1 == 1)
+
+            for i, j in zip(idxs[0], idxs[1]):
+                i0 = i-15
+                i1 = i+16
+                i0 = np.clip(i0, a_min=0, a_max=None)
+                i1 = np.clip(i1, a_min=None, a_max=self.width)
+
+                j0 = j-15
+                j1 = j+16
+                j0 = np.clip(j0, a_min=0, a_max=None)
+                j1 = np.clip(j1, a_min=None, a_max=self.length)
+
+                e_ij = e1[i, j, :]
+                e2_ij = e2[i0:i1, j0:j1, :]
+
+                diff = e2_ij - e_ij
+                dist = np.linalg.norm(diff, axis=2)
+                match = 0 * dist
+
+                i_match = int(np.round(i + flow[i, j, 0]))
+                j_match = int(np.round(j + flow[i, j, 1]))
+
+                ii = i_match-i0
+                jj = j_match-j0
+
+                if ii >= 0 and ii < match.shape[0] and jj >= 0 and jj < match.shape[1]:
+                    match[ii, jj] = 1
+
+                flat_dist = dist.flatten()
+                flat_match = match.flatten()
+
+                dists.append(flat_dist)
+                matchs.append(flat_match)
+
+        dists = np.concatenate(dists)
+        matchs = np.concatenate(matchs)
 
         plt.clf()
 
-        for cutoff in [0.2, 0.4, 0.6, 0.8]:
-            idx = probs[:, 0] > cutoff
-
-            if np.sum(idx) == 0:
-                continue
-
-            dists_c = distances[idx]
-            match_c = dataset.match[idx]
-
-            self.make_pr_curve(match_c, -dists_c, 'Cutoff = %5.3f' % cutoff)
-
-        self.make_pr_curve(dataset.match, -distances, 'All')
+        self.make_pr_curve(matchs, dists, 'All')
+        plt.grid()
 
         if save:
             plt.savefig(save)
