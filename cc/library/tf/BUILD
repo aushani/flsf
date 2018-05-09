@@ -7,6 +7,7 @@ cc_library(
     deps = [
             "//library/timer",
             "//library/gpu_util",
+            "//library/params",
             "//library/util",
             "//library/ray_tracing:ray_tracing_cuda",
             "//tools:cuda",

@@ -2,6 +2,10 @@
 
 #include <boost/assert.hpp>
 
+#include "library/params/params.h"
+
+namespace ps = library::params;
+
 namespace library {
 namespace tf {
 
@@ -48,7 +52,8 @@ __global__ void SetUnknown(gu::GpuData<3, float> dense) {
 }
 
 __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
-    gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense) {
+    gu::GpuData<1, float> log_odds, gu::GpuData<3, float> dense,
+    const int i0, const int i1, const int j0, const int j1, const int k0, const int k1) {
   // Figure out which hit this thread is processing
   const int bidx = blockIdx.x;
   const int tidx = threadIdx.x;
@@ -63,23 +68,27 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
   float lo = log_odds(idx);
   float p = 1.0 / (1.0 + expf(-lo));
 
-  int i = loc.i + dense.GetDim(0)/2;
-  int j = loc.j + dense.GetDim(1)/2;
-  int k = loc.k + dense.GetDim(2)/2;
+  int i = loc.i;
+  int j = loc.j;
+  int k = loc.k;
 
-  if (i < 0 || i >= dense.GetDim(0)) {
+  if (i < i0 || i >= i1) {
     return;
   }
 
-  if (j < 0 || j >= dense.GetDim(1)) {
+  if (j < j0 || j >= j1) {
     return;
   }
 
-  if (k < 0 || k >= dense.GetDim(2)) {
+  if (k < k0 || k >= k1) {
     return;
   }
 
   float val = p - 0.5;
+
+  i -= i0;
+  j -= j0;
+  k -= k0;
 
   dense(i, j, k) = val;
 }
@@ -106,7 +115,10 @@ void Network::SetInput(const rt::OccGrid &og) {
     // Copy over
     threads = 1024;
     blocks = std::ceil(static_cast<float>(sz)/threads);
-    CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_);
+    CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_,
+        ps::kOccGridMinXY, ps::kOccGridMaxXY,
+        ps::kOccGridMinXY, ps::kOccGridMaxXY,
+        ps::kOccGridMinZ, ps::kOccGridMaxZ);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }
