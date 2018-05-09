@@ -37,11 +37,11 @@ class MetricLearning:
         # Encoder
         self.encoding = self.get_encoding(self.occ)
 
-        # Metric distance
-        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow, self.filter)
-
         # Filter
         self.make_filter(self.occ1)
+
+        # Metric distance
+        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow, self.filter, self.filter_probs)
 
         # Loss
         self.loss = self.normalized_filter_loss + metric_loss
@@ -127,7 +127,7 @@ class MetricLearning:
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
         self.fg_accuracy = num_foreground_correct / num_foreground
 
-    def make_metric_distance(self, occ1, occ2, true_flow, true_filter):
+    def make_metric_distance(self, occ1, occ2, true_flow, true_filter, filter_probs):
         latent1 = self.get_encoding(occ1)
         latent2 = self.get_encoding(occ2)
 
@@ -165,6 +165,7 @@ class MetricLearning:
                 err2 = tf.multiply(err_x, err_x) + tf.multiply(err_y, err_y)
 
                 vf = valid_filter[:, i0:i1:decimation, j0:j1:decimation]
+                fp_bg = filter_probs[:, i0:i1:decimation, j0:j1:decimation, 1]
 
                 #print 'Dist shape'
                 #print dist_latent.shape
@@ -180,8 +181,11 @@ class MetricLearning:
                 #print val.shape
                 #print vf.shape
 
-                total_loss += tf.reduce_sum(vf*tf.sigmoid(val))
-                count += tf.reduce_sum(val)
+                loss = vf*tf.sigmoid(val)
+                # TODO scale according to fp bg
+
+                total_loss += tf.reduce_sum(loss)
+                count += tf.reduce_sum(vf)
 
         return total_loss / tf.cast(count, tf.float32)
 
