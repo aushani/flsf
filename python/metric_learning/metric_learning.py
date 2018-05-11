@@ -1,47 +1,58 @@
 import tensorflow as tf
-from data import *
+from flow_data import *
+from filter_data import *
 from batch_manager import *
 import time
-import sample
 import sys
+import sklearn
 
 class MetricLearning:
 
-    def __init__(self, data_manager, exp_name="exp"):
+    def __init__(self, filter_data, flow_data, exp_name="exp"):
         self.exp_name = exp_name
 
-        self.width  = data_manager.width
-        self.length = data_manager.length
-        self.height = data_manager.height
-        self.dim_data = self.width * self.length * self.height
+        self.full_width  = 167
+        self.full_length = 167
+        self.full_height = 13
 
-        self.validation_set = data_manager.validation_set
+        self.patch_width  = 13
+        self.patch_length = 13
+        self.patch_height = 13
+
+        self.filter_validation_set = filter_data.validation_set
+        self.flow_validation_set = flow_data.validation_set
 
         self.latent_dim = 10
 
-        self.default_keep_prob = 0.8
+        self.default_keep_prob = 0.5
+
+        self.filter_batches = BatchManager(filter_data)
+        self.flow_batches = BatchManager(flow_data)
 
         # Inputs
-        self.occ    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ')
+        self.full_occ    = tf.placeholder(tf.float32, shape=[None, self.full_width, self.full_length, self.full_height],
+                                          name='full_occ')
 
-        self.occ1    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ1')
-        self.occ2    = tf.placeholder(tf.float32, shape=[None, self.width, self.length, self.height], name='occ2')
+        self.patch1      = tf.placeholder(tf.float32, shape=[None, self.patch_width, self.patch_length, self.patch_height], name='patch1')
+        self.patch2      = tf.placeholder(tf.float32, shape=[None, self.patch_width, self.patch_length, self.patch_height], name='patch2')
 
-        self.filter  = tf.placeholder(tf.int32, shape=[None, self.width, self.length], name='filter')
+        self.err2        = tf.placeholder(tf.float32, shape=[None,], name='err2')
 
-        self.flow  = tf.placeholder(tf.float32, shape=[None, self.width, self.length, 2], name='flow')
+        # Ground truth outputs
+        self.filter  = tf.placeholder(tf.int32, shape=[None, self.full_width, self.full_length], name='filter')
+        self.match   = tf.placeholder(tf.int32, shape=[None,], name='match')
 
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
         # Encoder
-        self.encoding = self.get_encoding(self.occ)
+        self.encoding = self.get_encoding(self.full_occ)
 
         # Filter
-        self.make_filter(self.occ1)
+        self.make_filter(self.full_occ)
 
         # Metric distance
-        metric_loss = self.make_metric_distance(self.occ1, self.occ2, self.flow, self.filter, self.filter_probs)
+        metric_loss, self.dist = self.make_metric_distance(self.patch1, self.patch2, self.match, self.err2)
 
         # Loss
         self.loss = self.normalized_filter_loss + metric_loss
@@ -57,9 +68,8 @@ class MetricLearning:
 
         # Summaries
         metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
-        #filtered_metric_loss_sum = tf.summary.scalar('filtered metric distance loss', tf.reduce_mean(filtered_metric_loss))
 
-        filter_loss_sum = tf.summary.scalar('filter loss', tf.reduce_mean(self.normalized_filter_loss))
+        filter_loss_sum = tf.summary.scalar('filter loss', self.normalized_filter_loss)
         filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
 
         bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
@@ -69,20 +79,24 @@ class MetricLearning:
 
         self.summaries = tf.summary.merge_all()
 
-    def get_encoding(self, occ):
+    def get_encoding(self, occ, padding = 'SAME'):
         with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
             occ_do = tf.nn.dropout(occ, self.keep_prob)
 
-            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9, activation_fn = tf.nn.leaky_relu, scope='l1')
+            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l2')
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='l2')
             l2_do = tf.nn.dropout(l2, self.keep_prob)
 
-            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='l3')
+            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='l3')
             l3_do = tf.nn.dropout(l3, self.keep_prob)
 
-            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1, activation_fn = tf.nn.leaky_relu, scope='latent')
+            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='latent')
             latent_do = tf.nn.dropout(latent, self.keep_prob)
 
         return latent_do
@@ -127,78 +141,44 @@ class MetricLearning:
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
         self.fg_accuracy = num_foreground_correct / num_foreground
 
-    def make_metric_distance(self, occ1, occ2, true_flow, true_filter, filter_probs):
-        latent1 = self.get_encoding(occ1)
-        latent2 = self.get_encoding(occ2)
+    def make_metric_distance(self, patch1, patch2, match, err2):
+        latent1 = self.get_encoding(patch1, padding = 'VALID')
+        latent2 = self.get_encoding(patch1, padding = 'VALID')
 
-        invalid_filter = self.filter < 0
-        valid_filter = tf.cast(tf.logical_not(invalid_filter), tf.float32)
+        assert latent1.shape[1] == 1
+        assert latent1.shape[2] == 1
 
-        print 'Latent encodings'
-        print latent1.shape
-        print latent2.shape
+        assert latent2.shape[1] == 1
+        assert latent2.shape[2] == 1
 
-        total_loss = 0
-        count = 0
+        latent1 = tf.squeeze(latent1, axis=[1, 2])
+        latent2 = tf.squeeze(latent2, axis=[1, 2])
 
-        ds = [-15, -8, -4, -2, -1, 0, 1, 2, 4, 8, 15]
-        decimation = 2
+        #print 'Latent encodings'
+        #print latent1.shape
+        #print latent2.shape
 
-        for di in ds:
-            i0 = -di
-            i1 = self.width - di
-            i0 = np.clip(i0, a_min=0, a_max=None)
-            i1 = np.clip(i1, a_min=None, a_max=self.width)
+        dist = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
 
-            for dj in ds:
-                j0 = -dj
-                j1 = self.length - dj
-                j0 = np.clip(j0, a_min=0, a_max=None)
-                j1 = np.clip(j1, a_min=None, a_max=self.length)
+        non_match_loss = tf.clip_by_value(1 - dist, clip_value_min=0, clip_value_max=1)
+        match_loss = tf.multiply(err2, dist)
 
-                l1 = latent1[:, i0:i1:decimation, j0:j1:decimation, :]
-                l2 = latent2[:, (i0+di):(i1+di):decimation, (j0+dj):(j1+dj):decimation, :]
-                dist_latent = tf.reduce_sum(tf.squared_difference(l1, l2), axis=3, name='dist_%d_%d' % (di, dj))
+        loss = tf.where(match == 1, match_loss, non_match_loss, name='loss_switch')
+        loss = tf.reduce_sum(loss)
 
-                err_x = true_flow[:, i0:i1:decimation, j0:j1:decimation, 0] - di
-                err_y = true_flow[:, i0:i1:decimation, j0:j1:decimation, 1] - dj
-                err2 = tf.multiply(err_x, err_x) + tf.multiply(err_y, err_y)
+        return loss, dist
 
-                vf = valid_filter[:, i0:i1:decimation, j0:j1:decimation]
-                fp_bg = filter_probs[:, i0:i1:decimation, j0:j1:decimation, 1]
+    def eval_dist(self, patch1, patch2):
+        fd = {self.patch1: patch1, self.patch2: patch2, self.keep_prob: 1.0}
+        dist = self.dist.eval(session = self.sess, feed_dict = fd)
 
-                #print 'Dist shape'
-                #print dist_latent.shape
-                #print dist_latent
-
-                #print 'Err shape'
-                #print err2.shape
-
-                norm_err2 = tf.clip_by_value(err2 - 1.0, -1, 3)
-                val = norm_err2 * dist_latent
-
-                #print 'Val shape'
-                #print val.shape
-                #print vf.shape
-
-                scale = vf * fp_bg
-                loss = scale*tf.sigmoid(val)
-
-                total_loss += tf.reduce_sum(loss)
-                count += tf.reduce_sum(scale)
-
-        return total_loss / tf.cast(count, tf.float32)
-
-    def eval_encoding(self, occ):
-        fd = {self.occ: occ, self.keep_prob: 1}
-        encoding = self.encoding.eval(session = self.sess, feed_dict = fd)
-
-        return encoding
+        return dist
 
     def eval_filter_prob(self, occ):
         if len(occ.shape) == 3:
             occ = np.expand_dims(occ, 0)
-        fd = {self.occ1: occ, self.keep_prob: 1}
+
+        fd = {self.full_occ: occ, self.keep_prob: 1.0}
 
         probs = self.filter_probs.eval(session = self.sess, feed_dict = fd)
 
@@ -209,7 +189,7 @@ class MetricLearning:
         saver.restore(self.sess, filename)
         print 'Restored model from', filename
 
-    def train(self, batch_manager, start_iter = 0):
+    def train(self, start_iter = 0):
         if start_iter == 0:
             # Initialize variables
             self.sess.run(tf.global_variables_initializer())
@@ -220,10 +200,14 @@ class MetricLearning:
         # Save checkpoints
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
 
-        fd_valid = { self.occ1:        self.validation_set.occ1,
-                     self.occ2:        self.validation_set.occ2,
-                     self.filter:      self.validation_set.filter,
-                     self.flow:        self.validation_set.flow,
+        fd_valid = { self.full_occ:      self.filter_validation_set.occ,
+                     self.filter:        self.filter_validation_set.filter,
+
+                     self.patch1:        self.flow_validation_set.occ1,
+                     self.patch2:        self.flow_validation_set.occ2,
+                     self.err2:          self.flow_validation_set.err2,
+                     self.match:         self.flow_validation_set.match,
+
                      self.keep_prob:   1.0,
                    }
 
@@ -259,8 +243,8 @@ class MetricLearning:
 
             if iteration % it_plot == 0:
                 tic = time.time()
-                self.make_metric_plot(self.validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
-                self.make_filter_plot(self.validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_metric_plot(self.flow_validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_filter_plot(self.filter_validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
                 toc = time.time()
 
                 print '\tTook %5.3f sec to make plots' % (toc - tic)
@@ -283,17 +267,22 @@ class MetricLearning:
 
 
             tic = time.time()
-            samples = batch_manager.get_next_batch()
+            filter_samples = self.filter_batches.get_next_batch()
+            flow_samples = self.flow_batches.get_next_batch()
             toc = time.time()
 
             t_data += (toc - tic)
 
             tic = time.time()
-            fd = { self.occ1:        samples.occ1,
-                   self.occ2:        samples.occ2,
-                   self.filter:      samples.filter,
-                   self.flow:        samples.flow,
-                   self.keep_prob:   self.default_keep_prob,
+            fd = { self.full_occ:      filter_samples.occ,
+                   self.filter:        filter_samples.filter,
+
+                   self.patch1:        flow_samples.occ1,
+                   self.patch2:        flow_samples.occ2,
+                   self.err2:          flow_samples.err2,
+                   self.match:         flow_samples.match,
+
+                   self.keep_prob:     self.default_keep_prob,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -303,70 +292,18 @@ class MetricLearning:
             iteration += 1
 
     def make_metric_plot(self, dataset, save=None, show=False):
-        encodings1 = self.eval_encoding(dataset.occ1)
-        encodings2 = self.eval_encoding(dataset.occ2)
-
-        n = encodings1.shape[0]
-
-        dists = []
-        matchs = []
-
-        for sample_i in range(n):
-            e1 = encodings1[sample_i, :, :, :]
-            e2 = encodings2[sample_i, :, :, :]
-
-            flow = dataset.flow[sample_i, :, :, :]
-
-            f1 = dataset.filter[sample_i, :, :]
-
-            idxs = np.nonzero(f1 == 1)
-
-            for i, j in zip(idxs[0], idxs[1]):
-                i0 = i-15
-                i1 = i+16
-                i0 = np.clip(i0, a_min=0, a_max=None)
-                i1 = np.clip(i1, a_min=None, a_max=self.width)
-
-                j0 = j-15
-                j1 = j+16
-                j0 = np.clip(j0, a_min=0, a_max=None)
-                j1 = np.clip(j1, a_min=None, a_max=self.length)
-
-                e_ij = e1[i, j, :]
-                e2_ij = e2[i0:i1, j0:j1, :]
-
-                diff = e2_ij - e_ij
-                dist = np.linalg.norm(diff, axis=2)
-                match = 0 * dist
-
-                i_match = int(np.round(i + flow[i, j, 0]))
-                j_match = int(np.round(j + flow[i, j, 1]))
-
-                ii = i_match-i0
-                jj = j_match-j0
-
-                if ii >= 0 and ii < match.shape[0] and jj >= 0 and jj < match.shape[1]:
-                    match[ii, jj] = 1
-
-                flat_dist = dist.flatten()
-                flat_match = match.flatten()
-
-                dists.append(flat_dist)
-                matchs.append(flat_match)
-
-        dists = np.concatenate(dists)
-        matchs = np.concatenate(matchs)
+        distances = self.eval_dist(dataset.occ1, dataset.occ2)
 
         plt.clf()
+        self.make_pr_curve(dataset.match, -distances, 'All')
 
-        self.make_pr_curve(matchs, dists, 'All')
         plt.grid()
 
         if save:
             plt.savefig(save)
 
     def make_filter_plot(self, dataset, save=None, show=False):
-        probs = self.eval_filter_prob(dataset.occ1)
+        probs = self.eval_filter_prob(dataset.occ)
 
         true_label = dataset.filter
 
@@ -409,18 +346,19 @@ class MetricLearning:
 if __name__ == '__main__':
     plt.switch_backend('agg')
 
-    dm = DataManager()
-    dm.make_validation(50)
+    filter_dm = FilterDataManager()
+    flow_dm = FlowDataManager()
 
-    ml = MetricLearning(dm)
+    filter_dm.make_validation(50)
+    flow_dm.make_validation(10000)
 
-    bm = BatchManager(dm)
+    ml = MetricLearning(filter_dm, flow_dm)
 
     if len(sys.argv) > 1:
         load_iter = int(sys.argv[1])
         print 'Loading from iteration %d' % (load_iter)
 
         ml.restore('model.ckpt-%d' % (load_iter))
-        ml.train(bm, start_iter = load_iter+1)
+        ml.train(start_iter = load_iter+1)
     else:
-        ml.train(bm)
+        ml.train()
