@@ -26,7 +26,7 @@ void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
   int j1 = j0 + ps::kPatchSize;
 
   int k0 = ps::kOccGridMinZ;
-  int k1 = ps::kOccGridMaxZ;
+  int k1 = ps::kOccGridMaxZ + 1; // inclusive
 
   for (int ii = i0; ii < i1; ii++) {
     for (int jj = j0; jj < j1; jj++) {
@@ -65,7 +65,7 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
       kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
 
       // Check to make sure we're in camera view (ie, have a valid label)
-      if (!camera_cal_.InCameraView(x1, y1, z1) && c != kt::ObjectClass::NO_OBJECT) {
+      if (!camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
         continue;
       }
 
