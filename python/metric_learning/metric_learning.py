@@ -143,7 +143,14 @@ class MetricLearning:
 
     def make_metric_distance(self, patch1, patch2, match, err2):
         latent1 = self.get_encoding(patch1, padding = 'VALID')
-        latent2 = self.get_encoding(patch1, padding = 'VALID')
+        latent2 = self.get_encoding(patch2, padding = 'VALID')
+
+        err = tf.sqrt(err2)
+
+        err_thresh = 1
+
+        match_weight = tf.clip_by_value(err_thresh - err, clip_value_min=0, clip_value_max=1)
+        non_match_weight = tf.clip_by_value(err - err_thresh, clip_value_min=0, clip_value_max=1)
 
         assert latent1.shape[1] == 1
         assert latent1.shape[2] == 1
@@ -158,15 +165,15 @@ class MetricLearning:
         #print latent1.shape
         #print latent2.shape
 
-        dist = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
+        dist2 = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
 
-        non_match_loss = tf.clip_by_value(1 - dist, clip_value_min=0, clip_value_max=1)
-        match_loss = tf.multiply(err2, dist)
+        non_match_loss = tf.clip_by_value(1 - dist2, clip_value_min=0, clip_value_max=1)
+        match_loss = dist2
 
-        loss = tf.where(match == 1, match_loss, non_match_loss, name='loss_switch')
-        loss = tf.reduce_sum(loss)
+        loss = tf.multiply(match_weight, match_loss) + tf.multiply(non_match_weight, non_match_loss)
+        loss = tf.reduce_mean(loss)
 
-        return loss, dist
+        return loss, tf.sqrt(dist2)
 
     def eval_dist(self, patch1, patch2):
         fd = {self.patch1: patch1, self.patch2: patch2, self.keep_prob: 1.0}
