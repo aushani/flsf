@@ -23,9 +23,9 @@ namespace rt = library::ray_tracing;
 namespace app {
 namespace data {
 
-class Extractor {
+class MatchExtractor {
  public:
-  Extractor(const fs::path &base_path, const fs::path &save_path);
+  MatchExtractor(const fs::path &base_path, const fs::path &save_path);
 
   void Run();
 
@@ -42,10 +42,10 @@ class Extractor {
 
   std::ofstream save_file_;
 
+  size_t count_written_ = 0;
+
   void ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2);
-  void WriteOccGrid(const rt::OccGrid &og);
-  void WriteFilter(int frame);
-  void WriteFlow(int frame1, int frame2);
+  void Write(const rt::OccGrid &og, int i, int j);
 };
 
 } // data
