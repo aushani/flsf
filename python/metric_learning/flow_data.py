@@ -140,7 +140,7 @@ class FlowDataManager:
 
 if __name__ == '__main__':
     d = FlowDataManager()
-    d.make_validation(100)
+    d.make_validation(1000)
 
     valid_set = d.validation_set
 
@@ -155,11 +155,15 @@ if __name__ == '__main__':
 
     plt.clf()
 
-    plt.subplot(2, 1, 1)
+    plt.subplot(3, 1, 1)
     plt.hist(np.sqrt(valid_set.err2[valid_set.match == 1]))
 
-    plt.subplot(2, 1, 2)
+    plt.subplot(3, 1, 2)
     plt.hist(np.sqrt(valid_set.err2[valid_set.match == 0]))
+
+    plt.subplot(3, 1, 3)
+    #plt.hist(np.sqrt(valid_set.err2))
+    plt.hist(valid_set.err2)
 
     plt.show()
 
