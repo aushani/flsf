@@ -25,7 +25,8 @@ Network::Network(const ConvolutionalLayer &l1,
  res_cl2_(167, 167, l2.GetOutputLayers()),
  res_cl3_(167, 167, l3.GetOutputLayers()),
  res_clatent_(167, 167, latent.GetOutputLayers()),
- res_filter_(167, 167, cl_filter.GetOutputLayers()) {
+ res_filter_(167, 167, cl_filter.GetOutputLayers()),
+ res_filter_prob_(167, 167) {
   input_.SetCoalesceDim(0);
   res_cl1_.SetCoalesceDim(0);
   res_cl2_.SetCoalesceDim(0);
@@ -33,6 +34,7 @@ Network::Network(const ConvolutionalLayer &l1,
   res_clatent_.SetCoalesceDim(0);
   //res_classifier_.SetCoalesceDim(0);
   res_filter_.SetCoalesceDim(0);
+  res_filter_prob_.SetCoalesceDim(0);
 }
 
 __global__ void SetUnknown(gu::GpuData<3, float> dense) {
@@ -136,6 +138,10 @@ const gu::GpuData<3, float>& Network::GetFilter() const {
   return res_filter_;
 }
 
+const gu::GpuData<2, float>& Network::GetFilterProbability() const {
+  return res_filter_prob_;
+}
+
 void Network::Apply() {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
@@ -145,6 +151,50 @@ void Network::Apply() {
   //cl_classifier_.Apply(res_clatent_, &res_classifier_);
 
   cl_filter_.Apply(res_clatent_, &res_filter_);
+
+  ComputeFilterProbability();
+}
+
+__global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, float> prob) {
+  // Figure out which i, j this thread is processing
+  const int bidx = blockIdx.x;
+  const int bidy = blockIdx.y;
+
+  const int tidx = threadIdx.x;
+  const int tidy = threadIdx.y;
+
+  const int threads_x = blockDim.x;
+  const int threads_y = blockDim.y;
+
+  const int idx_i = tidx + bidx * threads_x;
+  const int idx_j = tidy + bidy * threads_y;
+
+  if (!prob.InRange(idx_i, idx_j)) {
+    return;
+  }
+
+  float s1 = res(idx_i, idx_j, 0);
+  float s2 = res(idx_i, idx_j, 1);
+  float denom = exp(s1) + exp(s2);
+  float p_filter = exp(s1)/denom;
+
+  prob(idx_i, idx_j) = p_filter;
+}
+
+void Network::ComputeFilterProbability() {
+  dim3 threads;
+  threads.x = 256;
+  threads.y = 1;
+  threads.z = 1;
+
+  dim3 blocks;
+  blocks.x = std::ceil(static_cast<float>(res_filter_.GetDim(0)) / threads.x);
+  blocks.y = std::ceil(static_cast<float>(res_filter_.GetDim(1)) / threads.y);
+  blocks.z = 1;
+
+  SoftmaxKernel<<<blocks, threads>>>(res_filter_, res_filter_prob_);
+  cudaError_t err = cudaDeviceSynchronize();
+  BOOST_ASSERT(err == cudaSuccess);
 }
 
 // Load from file

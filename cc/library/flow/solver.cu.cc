@@ -17,7 +17,7 @@ Solver::Solver(int nx, int ny, int n_window) :
 }
 
 __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
-                            const gu::GpuData<3, float> filter,
+                            const gu::GpuData<2, float> filter_prob,
                             gu::GpuData<3, int> flow_est,
                             gu::GpuData<2, int> flow_valid,
                             gu::GpuData<4, float> energy,
@@ -39,13 +39,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
     return;
   }
 
-  // Find p_filter
-  float s1 = filter(i_from, j_from, 0);
-  float s2 = filter(i_from, j_from, 1);
-  float denom = exp(s1) + exp(s2);
-  float p_filter = exp(s1)/denom;
-
-  if (p_filter > 0.8) {
+  if (filter_prob(i_from, j_from) > 0.8) {
     flow_est(i_from, j_from, 0) = 0;
     flow_est(i_from, j_from, 1) = 0;
 
@@ -116,9 +110,8 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
 
 __global__ void Maximization(const gu::GpuData<4, float> energy,
                              gu::GpuData<2, float> energy_hat,
-                             gu::GpuData<3, int> flow_est,
-                             gu::GpuData<2, int> flow_valid,
-                             const gu::GpuData<3, float> filter) {
+                             const gu::GpuData<3, int> flow_est,
+                             gu::GpuData<2, int> flow_valid) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
 
@@ -144,8 +137,8 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
 
   for (int di=0; di<energy.GetDim(2); di++) {
     for (int dj=0; dj<energy.GetDim(3); dj++) {
-      int i_from = i_dest - di;
-      int j_from = j_dest - dj;
+      int i_from = i_dest - (di - energy.GetDim(2)/2);
+      int j_from = j_dest - (dj - energy.GetDim(3)/2);
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -155,7 +148,7 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
       if (flow_valid(i_from, j_from) &&
           flow_est(i_from, j_from, 0) == di &&
           flow_est(i_from, j_from, 1) == dj &&
-          (energy(i_from, j_from, di, dj) < best_energy) || !valid) {
+          (energy(i_from, j_from, di, dj) < best_energy || !valid)) {
         best_energy = energy(i_from, j_from, di, dj);
         best_i_from = i_from;
         best_j_from = j_from;
@@ -174,8 +167,8 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
   // Invalidate other flows
   for (int di=0; di<energy.GetDim(2); di++) {
     for (int dj=0; dj<energy.GetDim(3); dj++) {
-      int i_from = i_dest - di;
-      int j_from = j_dest - dj;
+      int i_from = i_dest - (di - energy.GetDim(2)/2);
+      int j_from = j_dest - (dj - energy.GetDim(3)/2);
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -187,6 +180,7 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
         continue;
       }
 
+      // Invalidate it if it leads here
       if (flow_est(i_from, j_from, 0) == di &&
           flow_est(i_from, j_from, 1) == dj) {
         flow_valid(i_from, j_from) = 0;
@@ -261,7 +255,7 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
 }
 
 FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
-                              const gu::GpuData<3, float> &filter,
+                              const gu::GpuData<2, float> &filter_prob,
                               float resolution,
                               int iters) {
   library::timer::Timer timer;
@@ -269,8 +263,8 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   BOOST_ASSERT(dist_sq.GetDim(0) == nx_);
   BOOST_ASSERT(dist_sq.GetDim(1) == ny_);
 
-  BOOST_ASSERT(filter.GetDim(0) == nx_);
-  BOOST_ASSERT(filter.GetDim(1) == ny_);
+  BOOST_ASSERT(filter_prob.GetDim(0) == nx_);
+  BOOST_ASSERT(filter_prob.GetDim(1) == ny_);
 
   // Setup thread and block dims
   dim3 threads;
@@ -292,12 +286,12 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   //FlowKernel<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_);
   for (int iter = 0; iter<iters; iter++) {
     printf("Expectation\n");
-    Expectation<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_, energy, iter == 0 ? -1.0:w_p);
+    Expectation<<<blocks, threads>>>(dist_sq, filter_prob, flow_est_, flow_valid_, energy, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
 
     printf("Maximization\n");
-    Maximization<<<blocks, threads>>>(energy, energy_hat_, flow_est_, flow_valid_, filter);
+    Maximization<<<blocks, threads>>>(energy, energy_hat_, flow_est_, flow_valid_);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }

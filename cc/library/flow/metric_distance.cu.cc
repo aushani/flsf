@@ -34,8 +34,7 @@ __global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData
   // Find distance
   float dist_sq = 0.0;
 
-  if (i2 < 0 || i2 >= d2.GetDim(0) ||
-      j2 < 0 || j2 >= d2.GetDim(1)) {
+  if (!d2.InRange(i2, j2, 0)) {
     dist_sq = -1;
   } else {
     for (int k=0; k<d1.GetDim(2); k++) {

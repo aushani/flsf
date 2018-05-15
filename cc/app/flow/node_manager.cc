@@ -74,8 +74,8 @@ void NodeManager::UpdateViewer() {
 
     //car_node_->Render(true);
   } else if (view_mode_ == 3) {
-    pc1_->Render(false);
-    pc2_->Render(true);
+    pc1_->Render(true);
+    pc2_->Render(false);
 
     tn1_->Render(false);
     tn2_->Render(false);
@@ -144,8 +144,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   printf("Tracklets took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  og1n_->Update(fp.GetLastOccGrid1());
-  og2n_->Update(fp.GetLastOccGrid2(), fp.GetFilterMap());;
+  og1n_->Update(fp.GetLastOccGrid1(), fp.GetFilterMap1());
+  og2n_->Update(fp.GetLastOccGrid2(), fp.GetFilterMap2());;
   printf("Occ Grids took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
@@ -157,7 +157,7 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   //printf("Classification Map took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  fmn_->Update(fp.GetFilterMap());
+  fmn_->Update(fp.GetFilterMap1());
   printf("Filter map took %5.3f ms to render\n", t.GetMs());
 
   viewer_->Unlock();
