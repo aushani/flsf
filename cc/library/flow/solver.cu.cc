@@ -295,7 +295,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }
-  printf("Took %5.3f to evaluate flow\n", timer.GetMs());
+  printf("Took %5.3f ms to evaluate EM flow\n", timer.GetMs());
 
   // Copy from device
   gu::HostData<3, int> h_res(flow_est_);
