@@ -23,9 +23,9 @@ namespace rt = library::ray_tracing;
 namespace app {
 namespace data {
 
-class Extractor {
+class MatchExtractor {
  public:
-  Extractor(const fs::path &base_path, const fs::path &save_path);
+  MatchExtractor(const fs::path &base_path, const fs::path &save_path);
 
   void Run();
 

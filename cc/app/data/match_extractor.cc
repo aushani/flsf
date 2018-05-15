@@ -1,4 +1,4 @@
-#include "app/data/extractor.h"
+#include "app/data/match_extractor.h"
 
 #include "library/ray_tracing/occ_grid_location.h"
 
@@ -7,7 +7,7 @@
 namespace app {
 namespace data {
 
-Extractor::Extractor(const fs::path &base_path, const fs::path &save_path) :
+MatchExtractor::MatchExtractor(const fs::path &base_path, const fs::path &save_path) :
  scans_(kt::VelodyneScan::LoadDirectory(base_path / "velodyne_points" / "data")),
  sm_poses_(kt::Pose::LoadScanMatchedPoses(base_path)),
  camera_cal_(base_path.parent_path()),
@@ -17,7 +17,7 @@ Extractor::Extractor(const fs::path &base_path, const fs::path &save_path) :
   tracklets_.loadFromFile( (base_path / "tracklet_labels.xml").string() );
 }
 
-void Extractor::Write(const rt::OccGrid &og, int i, int j) {
+void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
   // Get bounds
   int i0 = i - ps::kPatchSize / 2;
   int i1 = i0 + ps::kPatchSize;
@@ -26,7 +26,7 @@ void Extractor::Write(const rt::OccGrid &og, int i, int j) {
   int j1 = j0 + ps::kPatchSize;
 
   int k0 = ps::kOccGridMinZ;
-  int k1 = ps::kOccGridMaxZ;
+  int k1 = ps::kOccGridMaxZ + 1; // inclusive
 
   for (int ii = i0; ii < i1; ii++) {
     for (int jj = j0; jj < j1; jj++) {
@@ -40,7 +40,7 @@ void Extractor::Write(const rt::OccGrid &og, int i, int j) {
   }
 }
 
-void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2) {
+void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2) {
   // Get vehicle poses
   kt::Pose p1 = sm_poses_[idx1];
   kt::Pose p2 = sm_poses_[idx2];
@@ -61,13 +61,13 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
       double z1 = 0.0;
       Eigen::Vector2f pos1(x1, y1);
 
-      // Check to make sure we're in camera view
-      if (!camera_cal_.InCameraView(x1, y1, z1)) {
-        continue;
-      }
-
       // Get object type
       kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
+
+      // Check to make sure we're in camera view (ie, have a valid label)
+      if (!camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
+        continue;
+      }
 
       // If it's background, we should potentially skip it because we get a lot
       // of these
@@ -80,7 +80,7 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
       int i2_match = std::round(pos2.x() / ps::kResolution);
       int j2_match = std::round(pos2.y() / ps::kResolution);
 
-      // Look through search spacej;w
+      // Look through search space
       for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
         for (int dj=ps::kMinSearchDist; dj<=ps::kMaxSearchDist/2; dj++) {
           int i2 = i1 + di;
@@ -98,8 +98,21 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
           Write(og1, i1, j1);
           Write(og2, i2, j2);
 
-          int object_type = kt::ObjectClassToInt(c);
-          save_file_.write(reinterpret_cast<const char*>(&object_type), sizeof(int));
+          // Get filter label
+          int filter_label = -1;
+          if (camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
+            filter_label = 0;
+          } else if (c != kt::ObjectClass::NO_OBJECT) {
+            filter_label = 1;
+          }
+
+          float err_i = (i2 - (pos2.x() / ps::kResolution));
+          float err_j = (j2 - (pos2.y() / ps::kResolution));
+          float err2 = err_i*err_i + err_j*err_j;
+
+          save_file_.write(reinterpret_cast<const char*>(&err2), sizeof(float));
+
+          save_file_.write(reinterpret_cast<const char*>(&filter_label), sizeof(int));
 
           int match_flag = match ? 1:0;
           save_file_.write(reinterpret_cast<const char*>(&match_flag), sizeof(int));
@@ -111,7 +124,7 @@ void Extractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, 
   }
 }
 
-void Extractor::Run() {
+void MatchExtractor::Run() {
   kt::VelodyneScan first = scans_[0];
   rt::OccGrid prev = og_builder_.GenerateOccGrid(first.GetHits());
 
@@ -122,7 +135,7 @@ void Extractor::Run() {
     ProcessOccGrids(prev, next, scan_at - 1, scan_at);
     prev = next;
 
-    printf("Processed frame %ld, written %ld so far\n", scan_at, count_written_);
+    printf("\nProcessed frame %ld, written %ld so far\n", scan_at, count_written_);
   }
 }
 

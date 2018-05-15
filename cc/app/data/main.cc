@@ -4,7 +4,8 @@
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 
-#include "app/data/extractor.h"
+#include "app/data/filter_extractor.h"
+#include "app/data/match_extractor.h"
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -68,9 +69,13 @@ int main(int argc, char** argv) {
     fs::create_directories(save_path);
   }
 
-  app::data::Extractor extractor(base_path, save_path);
+  printf("Running filter extractor\n");
+  app::data::FilterExtractor fe(base_path, save_path);
+  fe.Run();
 
-  extractor.Run();
+  printf("Running match extractor\n");
+  app::data::MatchExtractor me(base_path, save_path);
+  me.Run();
 
   printf("\nDone\n");
 

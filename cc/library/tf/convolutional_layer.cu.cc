@@ -132,5 +132,9 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   printf("\tKernel took %5.3f ms\n", t.GetMs());
 }
 
+int ConvolutionalLayer::GetOutputLayers() const {
+  return biases_.GetDim(0);
+}
+
 } // namespace tf
 } // namespace library

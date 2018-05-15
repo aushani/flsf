@@ -98,6 +98,10 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
   int height = width;
   im->allocateImage(width, height, depth, GL_RGBA, GL_FLOAT);
 
+  int best_i = 0;
+  int best_j = 0;
+  double best_dist = -1;
+
   for (int i = 0; i < width; i++) {
     for (int j = 0; j < height; j++) {
       int di = dm.MinOffset() + i;
@@ -105,7 +109,7 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
 
       double dist = dm.GetDistance(i0, j0, di, dj);
 
-      double val = dist / 20.0;
+      double val = dist / kDistScaleFactor_;
 
       if (val > 1) val = 1;
       if (val < 0) val = 0;
@@ -116,8 +120,26 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
 
       osg::Vec4 color(r, g, b, 0.5);
       im->setColor(color, i, j, 0);
+
+      if (dist < best_dist || best_dist < 0) {
+        best_i = i;
+        best_j = j;
+        best_dist = dist;
+      }
     }
   }
+
+  double val = best_dist / kDistScaleFactor_;
+
+  if (val > 1) val = 1;
+  if (val < 0) val = 0;
+
+  double r = val;
+  double g = 0.5;
+  double b = 1-r;
+
+  osg::Vec4 color(r, g, b, 0.5);
+  im->setColor(color, best_i, best_j, 0);
 
   return im;
 }

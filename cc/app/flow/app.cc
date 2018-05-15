@@ -172,7 +172,7 @@ void App::HandleClick(const Command &command) {
   node_manager_.ShowDistanceMap(flow_processor_, x, y);
 
   // Get filter result
-  const auto &fm = flow_processor_.GetFilterMap();
+  const auto &fm = flow_processor_.GetFilterMap1();
   float prob = fm.GetFilterProbabilityXY(x, y);
 
   printf("Filter prob: %5.3f %%\n", prob * 100.0);

@@ -42,7 +42,8 @@ class FlowProcessor {
 
   FlowImage GetFlowImage() const;
   //const ClassificationMap& GetClassificationMap() const;
-  const FilterMap& GetFilterMap() const;
+  const FilterMap& GetFilterMap1() const;
+  const FilterMap& GetFilterMap2() const;
   const DistanceMap& GetDistanceMap() const;
 
  private:

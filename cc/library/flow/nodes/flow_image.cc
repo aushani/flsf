@@ -34,8 +34,8 @@ void FlowImage::Update(const fl::FlowImage &fi) {
 
       // Check for valid flow
       if (!fi.GetFlowValid(i, j)) {
-        //continue;
-        color = color_invalid;
+        continue;
+        //color = color_invalid;
       }
 
       float fx = fi.GetResolution() * fi.GetXFlow(i, j);

@@ -27,6 +27,7 @@ class Network {
   const gu::GpuData<3, float>& GetEncoding() const;
   //const gu::GpuData<3, float>& GetClassification() const;
   const gu::GpuData<3, float>& GetFilter() const;
+  const gu::GpuData<2, float>& GetFilterProbability() const;
 
   void Apply();
 
@@ -49,11 +50,16 @@ class Network {
   //gu::GpuData<3, float> res_classifier_;
   gu::GpuData<3, float> res_filter_;
 
+  gu::GpuData<2, float> res_filter_prob_;
+
   Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const
       ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const
       ConvolutionalLayer &clc);
 
   static std::vector<float> LoadFile(const fs::path &path);
+  static std::vector<int> LoadDimFile(const fs::path &path);
+
+  void ComputeFilterProbability();
 };
 
 } // namespace tf

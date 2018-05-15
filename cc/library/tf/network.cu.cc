@@ -20,13 +20,13 @@ Network::Network(const ConvolutionalLayer &l1,
  clatent_(latent),
  //cl_classifier_(clc),
  cl_filter_(cl_filter),
- input_(167, 167, 12),
- res_cl1_(167, 167, 200),
- res_cl2_(167, 167, 100),
- res_cl3_(167, 167, 50),
- res_clatent_(167, 167, 25),
- //res_classifier_(167, 167, 8),
- res_filter_(167, 167, 2) {
+ input_(167, 167, 13),
+ res_cl1_(167, 167, l1.GetOutputLayers()),
+ res_cl2_(167, 167, l2.GetOutputLayers()),
+ res_cl3_(167, 167, l3.GetOutputLayers()),
+ res_clatent_(167, 167, latent.GetOutputLayers()),
+ res_filter_(167, 167, cl_filter.GetOutputLayers()),
+ res_filter_prob_(167, 167) {
   input_.SetCoalesceDim(0);
   res_cl1_.SetCoalesceDim(0);
   res_cl2_.SetCoalesceDim(0);
@@ -34,6 +34,7 @@ Network::Network(const ConvolutionalLayer &l1,
   res_clatent_.SetCoalesceDim(0);
   //res_classifier_.SetCoalesceDim(0);
   res_filter_.SetCoalesceDim(0);
+  res_filter_prob_.SetCoalesceDim(0);
 }
 
 __global__ void SetUnknown(gu::GpuData<3, float> dense) {
@@ -84,11 +85,12 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
     return;
   }
 
-  float val = p - 0.5;
-
   i -= i0;
   j -= j0;
   k -= k0;
+
+  float val = p - 0.5;
+  //float val = p;
 
   dense(i, j, k) = val;
 }
@@ -116,9 +118,9 @@ void Network::SetInput(const rt::OccGrid &og) {
     threads = 1024;
     blocks = std::ceil(static_cast<float>(sz)/threads);
     CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_,
-        ps::kOccGridMinXY, ps::kOccGridMaxXY,
-        ps::kOccGridMinXY, ps::kOccGridMaxXY,
-        ps::kOccGridMinZ, ps::kOccGridMaxZ);
+                                    ps::kOccGridMinXY, ps::kOccGridMaxXY,
+                                    ps::kOccGridMinXY, ps::kOccGridMaxXY,
+                                    ps::kOccGridMinZ, ps::kOccGridMaxZ);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }
@@ -136,6 +138,10 @@ const gu::GpuData<3, float>& Network::GetFilter() const {
   return res_filter_;
 }
 
+const gu::GpuData<2, float>& Network::GetFilterProbability() const {
+  return res_filter_prob_;
+}
+
 void Network::Apply() {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
@@ -145,6 +151,50 @@ void Network::Apply() {
   //cl_classifier_.Apply(res_clatent_, &res_classifier_);
 
   cl_filter_.Apply(res_clatent_, &res_filter_);
+
+  ComputeFilterProbability();
+}
+
+__global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, float> prob) {
+  // Figure out which i, j this thread is processing
+  const int bidx = blockIdx.x;
+  const int bidy = blockIdx.y;
+
+  const int tidx = threadIdx.x;
+  const int tidy = threadIdx.y;
+
+  const int threads_x = blockDim.x;
+  const int threads_y = blockDim.y;
+
+  const int idx_i = tidx + bidx * threads_x;
+  const int idx_j = tidy + bidy * threads_y;
+
+  if (!prob.InRange(idx_i, idx_j)) {
+    return;
+  }
+
+  float s1 = res(idx_i, idx_j, 0);
+  float s2 = res(idx_i, idx_j, 1);
+  float denom = exp(s1) + exp(s2);
+  float p_filter = exp(s1)/denom;
+
+  prob(idx_i, idx_j) = p_filter;
+}
+
+void Network::ComputeFilterProbability() {
+  dim3 threads;
+  threads.x = 256;
+  threads.y = 1;
+  threads.z = 1;
+
+  dim3 blocks;
+  blocks.x = std::ceil(static_cast<float>(res_filter_.GetDim(0)) / threads.x);
+  blocks.y = std::ceil(static_cast<float>(res_filter_.GetDim(1)) / threads.y);
+  blocks.z = 1;
+
+  SoftmaxKernel<<<blocks, threads>>>(res_filter_, res_filter_prob_);
+  cudaError_t err = cudaDeviceSynchronize();
+  BOOST_ASSERT(err == cudaSuccess);
 }
 
 // Load from file
@@ -161,26 +211,38 @@ std::vector<float> Network::LoadFile(const fs::path &path) {
   return data;
 }
 
+std::vector<int> Network::LoadDimFile(const fs::path &path) {
+  std::vector<int> data;
+
+  std::ifstream file(path.string());
+
+  int val;
+  while (file >> val) {
+    data.push_back(val);
+  }
+
+  return data;
+}
+
 Network Network::LoadNetwork(const fs::path &path) {
   printf("Loading from path: %s\n", path.c_str());
 
-  gu::GpuData<4, float> l1_weights(7, 7, 12, 200);
-  gu::GpuData<1, float> l1_biases(200);
+  std::vector<int> dim = LoadDimFile(path / "dim.dat");
 
-  gu::GpuData<4, float> l2_weights(1, 1, 200, 100);
-  gu::GpuData<1, float> l2_biases(100);
+  gu::GpuData<1, float> l1_biases(dim[0]);
+  gu::GpuData<4, float> l1_weights(dim[1], dim[2], dim[3], dim[4]);
 
-  gu::GpuData<4, float> l3_weights(1, 1, 100, 50);
-  gu::GpuData<1, float> l3_biases(50);
+  gu::GpuData<1, float> l2_biases(dim[5]);
+  gu::GpuData<4, float> l2_weights(dim[6], dim[7], dim[8], dim[9]);
 
-  gu::GpuData<4, float> latent_weights(1, 1, 50, 25);
-  gu::GpuData<1, float> latent_biases(25);
+  gu::GpuData<1, float> l3_biases(dim[10]);
+  gu::GpuData<4, float> l3_weights(dim[11], dim[12], dim[13], dim[14]);
 
-  //gu::GpuData<4, float> classifier_weights(1, 1, 25, 8);
-  //gu::GpuData<1, float> classifier_biases(8);
+  gu::GpuData<1, float> latent_biases(dim[15]);
+  gu::GpuData<4, float> latent_weights(dim[16], dim[17], dim[18], dim[19]);
 
-  gu::GpuData<4, float> filter_weights(1, 1, 25, 2);
-  gu::GpuData<1, float> filter_biases(2);
+  gu::GpuData<1, float> filter_biases(dim[20]);
+  gu::GpuData<4, float> filter_weights(dim[21], dim[22], dim[23], dim[24]);
 
   l1_weights.CopyFrom(Network::LoadFile(path / "Encoder_l1_weights.dat"));
   l1_biases.CopyFrom(Network::LoadFile(path / "Encoder_l1_biases.dat"));
