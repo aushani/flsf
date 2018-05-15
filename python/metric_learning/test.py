@@ -1,10 +1,8 @@
 from metric_learning import *
-from data import *
+from filter_data import *
 import matplotlib.pyplot as plt
 import sys
 import time
-
-plt.switch_backend('GTKAgg')
 
 if len(sys.argv) < 2:
     print 'Please specify tensorflow model file'
@@ -12,18 +10,20 @@ if len(sys.argv) < 2:
 
 model_file = sys.argv[1]
 
-dm = DataManager()
+filter_data = FilterDataManager()
+flow_data = FlowDataManager()
 
-ml = MetricLearning(dm)
+filter_data.make_validation(50)
+flow_data.make_validation(10000)
+
+ml = MetricLearning(filter_data, flow_data)
 ml.restore(model_file)
 
 while True:
-    sample = dm.get_next_sample(augment = False)
-
-    print sample.occ1
+    sample = filter_data.get_next_sample(augment = False)
 
     tic = time.time()
-    probs = ml.eval_filter_prob(sample.occ1)
+    probs = ml.eval_filter_prob(sample.occ)
     toc = time.time()
     t_ms = (toc - tic) * 1e3
 
