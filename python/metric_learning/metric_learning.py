@@ -173,7 +173,7 @@ class MetricLearning:
         latent1 = tf.squeeze(latent1, axis=[1, 2])
         latent2 = tf.squeeze(latent2, axis=[1, 2])
 
-        pred_patch_filter= tf.squeeze(pred_patch_filter, axis=[1, 2])
+        pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
         pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
         prob_bg = pred_patch_filter_prob[:, 0]
         prob_fg = pred_patch_filter_prob[:, 1]
@@ -202,7 +202,8 @@ class MetricLearning:
                               'loss_switch')
 
         # Weight according to filter prob
-        weighted_loss = tf.multiply(prob_fg, match_loss)
+        #weighted_loss = tf.multiply(prob_fg, match_loss)
+        weighted_loss = tf.multiply(true_patch_filter, match_loss)
 
         # Penalize incorrect filter
         filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_patch_filter,
@@ -266,10 +267,10 @@ class MetricLearning:
 
         iteration = start_iter
 
-        it_save = 1000
-        it_plot = 1000
-        it_summ = 100
-        it_stat = 1000
+        it_save = 10000
+        it_plot = 10000
+        it_summ = 10000
+        it_stat = 10000
 
         t_sum = 0
         t_save = 0
