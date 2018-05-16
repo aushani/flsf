@@ -42,6 +42,8 @@ class MetricLearning:
         self.filter  = tf.placeholder(tf.int32, shape=[None, self.full_width, self.full_length], name='filter')
         self.match   = tf.placeholder(tf.int32, shape=[None,], name='match')
 
+        self.patch1_filter = tf.placeholder(tf.int32, shape=[None,], name='patch1_filter')
+
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
@@ -52,7 +54,8 @@ class MetricLearning:
         self.make_filter(self.full_occ)
 
         # Metric distance
-        metric_loss, self.dist = self.make_metric_distance(self.patch1, self.patch2, self.match, self.err2)
+        metric_loss, self.dist, self.pred_patch_prob_fg = self.make_metric_distance(self.patch1, self.patch2,
+                                                                                    self.match, self.err2, self.patch1_filter)
 
         # Loss
         self.loss = self.normalized_filter_loss + metric_loss
@@ -101,12 +104,20 @@ class MetricLearning:
 
         return latent_do
 
+    def get_filter(self, occ, padding = 'SAME'):
+        encoding = self.get_encoding(occ, padding = padding)
+
+        with tf.variable_scope('Filter', reuse=tf.AUTO_REUSE):
+            #pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
+            pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 1,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
+
+            filter_probs = tf.nn.softmax(logits = pred_filter)
+
+        return pred_filter, filter_probs
+
     def make_filter(self, occ):
-        encoding = self.get_encoding(occ)
-
-        self.pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
-
-        self.filter_probs = tf.nn.softmax(logits = self.pred_filter)
+        self.pred_filter, self.filter_probs = self.get_filter(occ)
 
         # Make filter loss
         invalid_filter = self.filter < 0
@@ -141,16 +152,11 @@ class MetricLearning:
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
         self.fg_accuracy = num_foreground_correct / num_foreground
 
-    def make_metric_distance(self, patch1, patch2, match, err2):
+    def make_metric_distance(self, patch1, patch2, match, err2, true_patch_filter):
         latent1 = self.get_encoding(patch1, padding = 'VALID')
         latent2 = self.get_encoding(patch2, padding = 'VALID')
 
-        err = tf.sqrt(err2)
-
-        err_thresh = 1
-
-        match_weight = tf.clip_by_value(err_thresh - err, clip_value_min=0, clip_value_max=1)
-        non_match_weight = tf.clip_by_value(err - err_thresh, clip_value_min=0, clip_value_max=1)
+        pred_patch_filter, pred_patch_filter_prob = self.get_filter(patch1, padding = 'VALID')
 
         assert latent1.shape[1] == 1
         assert latent1.shape[2] == 1
@@ -158,28 +164,67 @@ class MetricLearning:
         assert latent2.shape[1] == 1
         assert latent2.shape[2] == 1
 
+        assert pred_patch_filter.shape[1] == 1
+        assert pred_patch_filter.shape[2] == 1
+
+        assert pred_patch_filter_prob.shape[1] == 1
+        assert pred_patch_filter_prob.shape[2] == 1
+
         latent1 = tf.squeeze(latent1, axis=[1, 2])
         latent2 = tf.squeeze(latent2, axis=[1, 2])
 
-        #print 'Latent encodings'
-        #print latent1.shape
-        #print latent2.shape
+        pred_patch_filter= tf.squeeze(pred_patch_filter, axis=[1, 2])
+        pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
+        prob_bg = pred_patch_filter_prob[:, 0]
+        prob_fg = pred_patch_filter_prob[:, 1]
 
-        dist2 = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
+        # Spatial distance between patch1 and path2 (in grid dimensions)
+        err = tf.sqrt(err2)
+        err_thresh = 2.0           # 0.6 meters
 
-        non_match_loss = tf.clip_by_value(1 - dist2, clip_value_min=0, clip_value_max=1)
-        match_loss = dist2
+        # Soft weights
+        match_weight = tf.clip_by_value(err_thresh - err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
+        non_match_weight = tf.clip_by_value(err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
 
-        loss = tf.multiply(match_weight, match_loss) + tf.multiply(non_match_weight, non_match_loss)
-        loss = tf.reduce_mean(loss)
+        metric_dist2 = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
+        metric_dist = tf.sqrt(metric_dist2)
 
-        return loss, tf.sqrt(dist2)
+        # Loss based on distance
+        max_dist2 = 10
+        non_match_loss = tf.clip_by_value(max_dist2 - metric_dist2, clip_value_min=0, clip_value_max=max_dist2)
+        match_loss = metric_dist2
+
+        # Select which loss according to match flag
+        match_flag = match > 0
+        match_loss = tf.where(match_flag,
+                              tf.multiply(match_weight, match_loss),
+                              tf.multiply(non_match_weight, non_match_loss),
+                              'loss_switch')
+
+        # Weight according to filter prob
+        weighted_loss = tf.multiply(prob_fg, match_loss)
+
+        # Penalize incorrect filter
+        filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_patch_filter,
+                                                                     logits=pred_patch_filter)
+
+        net_loss = filter_loss + weighted_loss
+
+        net_loss = tf.reduce_mean(net_loss)
+
+        return net_loss, metric_dist, prob_fg
 
     def eval_dist(self, patch1, patch2):
         fd = {self.patch1: patch1, self.patch2: patch2, self.keep_prob: 1.0}
         dist = self.dist.eval(session = self.sess, feed_dict = fd)
 
         return dist
+
+    def eval_patch_prob_fg(self, patch):
+        fd = {self.patch1: patch, self.keep_prob: 1.0}
+        prob_fg = self.pred_patch_prob_fg.eval(session = self.sess, feed_dict = fd)
+
+        return prob_fg
 
     def eval_filter_prob(self, occ):
         if len(occ.shape) == 3:
@@ -207,13 +252,14 @@ class MetricLearning:
         # Save checkpoints
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
 
-        fd_valid = { self.full_occ:      self.filter_validation_set.occ,
-                     self.filter:        self.filter_validation_set.filter,
+        fd_valid = { self.full_occ:        self.filter_validation_set.occ,
+                     self.filter:          self.filter_validation_set.filter,
 
-                     self.patch1:        self.flow_validation_set.occ1,
-                     self.patch2:        self.flow_validation_set.occ2,
-                     self.err2:          self.flow_validation_set.err2,
-                     self.match:         self.flow_validation_set.match,
+                     self.patch1:          self.flow_validation_set.occ1,
+                     self.patch2:          self.flow_validation_set.occ2,
+                     self.err2:            self.flow_validation_set.err2,
+                     self.match:           self.flow_validation_set.match,
+                     self.patch1_filter:   self.flow_validation_set.filter,
 
                      self.keep_prob:   1.0,
                    }
@@ -281,15 +327,16 @@ class MetricLearning:
             t_data += (toc - tic)
 
             tic = time.time()
-            fd = { self.full_occ:      filter_samples.occ,
-                   self.filter:        filter_samples.filter,
+            fd = { self.full_occ:        filter_samples.occ,
+                   self.filter:          filter_samples.filter,
 
-                   self.patch1:        flow_samples.occ1,
-                   self.patch2:        flow_samples.occ2,
-                   self.err2:          flow_samples.err2,
-                   self.match:         flow_samples.match,
+                   self.patch1:          flow_samples.occ1,
+                   self.patch2:          flow_samples.occ2,
+                   self.err2:            flow_samples.err2,
+                   self.match:           flow_samples.match,
+                   self.patch1_filter:   flow_samples.filter,
 
-                   self.keep_prob:     self.default_keep_prob,
+                   self.keep_prob:       self.default_keep_prob,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -300,10 +347,53 @@ class MetricLearning:
 
     def make_metric_plot(self, dataset, save=None, show=False):
         distances = self.eval_dist(dataset.occ1, dataset.occ2)
+        prob_fg = self.eval_patch_prob_fg(dataset.occ1)
+        err = np.sqrt(dataset.err2)
 
         plt.clf()
-        self.make_pr_curve(dataset.match, -distances, 'All')
+        fig = plt.gcf()
+        fig.set_size_inches(10, 20)
 
+        plt.subplot(3, 1, 1)
+        plt.title('PR by Filter Prob')
+        for cutoff in [0.2, 0.4, 0.6, 0.8]:
+            idx = prob_fg > cutoff
+
+            if np.sum(idx) == 0:
+                continue
+
+            dist_c = distances[idx]
+            match_c = dataset.match[idx]
+            n_samples = np.sum(idx)
+
+            self.make_pr_curve(match_c, -dist_c, 'P_fg > %3.1f (%d samples)' % (cutoff, n_samples))
+
+        n_samples = len(dataset.match)
+        self.make_pr_curve(dataset.match, -distances, 'All (%d samples)' % (n_samples))
+        plt.grid()
+
+        plt.subplot(3, 1, 2)
+        plt.title('PR By Spatial Distance')
+        idx_match = dataset.match == 1
+        idx_nonmatch = dataset.match == 0
+
+        plt.hist(distances[idx_match],    bins=100, range=(0, 3.0),
+                histtype='step', label='Matching (%d)' % np.sum(idx_match))
+        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 3.0),
+                histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+        plt.legend(loc='upper right')
+        plt.grid()
+
+        plt.subplot(3, 1, 3)
+        plt.title('PR By Spatial Distance (Foreground only)')
+        idx_match = (dataset.match == 1) & (dataset.filter == 1)
+        idx_nonmatch = (dataset.match == 0) & (dataset.filter == 1)
+
+        plt.hist(distances[idx_match],    bins=100, range=(0, 3.0),
+                histtype='step', label='Matching (%d)' % np.sum(idx_match))
+        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 3.0),
+                histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+        plt.legend(loc='upper right')
         plt.grid()
 
         if save:
@@ -327,6 +417,9 @@ class MetricLearning:
         valid = np.logical_or(is_background, is_foreground)
 
         plt.clf()
+        fig = plt.gcf()
+        fig.set_size_inches(10, 8)
+
         self.make_pr_curve(is_background[valid], prob_background[valid], 'Background')
         self.make_pr_curve(is_foreground[valid], prob_foreground[valid], 'Foreground')
 

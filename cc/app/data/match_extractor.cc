@@ -81,8 +81,8 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
       int j2_match = std::round(pos2.y() / ps::kResolution);
 
       // Look through search space
-      for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist/2; di++) {
-        for (int dj=ps::kMinSearchDist; dj<=ps::kMaxSearchDist/2; dj++) {
+      for (int di=ps::kMinSearchDist; di<=ps::kMaxSearchDist; di++) {
+        for (int dj=ps::kMinSearchDist; dj<=ps::kMaxSearchDist; dj++) {
           int i2 = i1 + di;
           int j2 = j1 + dj;
 
