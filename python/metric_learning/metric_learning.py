@@ -202,8 +202,8 @@ class MetricLearning:
                               'loss_switch')
 
         # Weight according to filter prob
-        #weighted_loss = tf.multiply(prob_fg, match_loss)
-        weighted_loss = tf.multiply(true_patch_filter, match_loss)
+        weighted_loss = tf.multiply(prob_fg, match_loss)
+        #weighted_loss = tf.multiply(tf.cast(true_patch_filter, tf.float32), match_loss)
 
         # Penalize incorrect filter
         filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_patch_filter,
@@ -267,10 +267,10 @@ class MetricLearning:
 
         iteration = start_iter
 
-        it_save = 10000
-        it_plot = 10000
-        it_summ = 10000
-        it_stat = 10000
+        it_save = 1000
+        it_plot = 1000
+        it_summ = 1000
+        it_stat = 1000
 
         t_sum = 0
         t_save = 0
