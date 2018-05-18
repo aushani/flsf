@@ -8,26 +8,28 @@ import sklearn
 
 class MetricLearning:
 
-    def __init__(self, filter_data, flow_data, exp_name="exp"):
+    def __init__(self, filter_data=None, flow_data=None, exp_name="exp"):
         self.exp_name = exp_name
 
         self.full_width  = 167
         self.full_length = 167
         self.full_height = 13
 
-        self.patch_width  = 13
-        self.patch_length = 13
+        self.patch_width  = 15
+        self.patch_length = 15
         self.patch_height = 13
 
-        self.filter_validation_set = filter_data.validation_set
-        self.flow_validation_set = flow_data.validation_set
+        if filter_data:
+            self.filter_validation_set = filter_data.validation_set
+            self.filter_batches = BatchManager(filter_data)
+
+        if flow_data:
+            self.flow_validation_set = flow_data.validation_set
+            self.flow_batches = BatchManager(flow_data)
 
         self.latent_dim = 10
 
         self.default_keep_prob = 0.5
-
-        self.filter_batches = BatchManager(filter_data)
-        self.flow_batches = BatchManager(flow_data)
 
         # Filter weighting
         num_neg = 12119773.0
@@ -118,8 +120,7 @@ class MetricLearning:
         encoding = self.get_encoding(occ, padding = padding)
 
         with tf.variable_scope('Filter', reuse=tf.AUTO_REUSE):
-            #pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3, activation_fn = tf.nn.leaky_relu, scope='filter')
-            pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 1,
+            pred_filter = tf.contrib.layers.conv2d(encoding, num_outputs = 2, kernel_size = 3,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
 
             filter_probs = tf.nn.softmax(logits = pred_filter)

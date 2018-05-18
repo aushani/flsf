@@ -43,8 +43,8 @@ var_names = [
 'Encoder/l3/weights',
 'Encoder/latent/biases',
 'Encoder/latent/weights',
-'filter/biases',
-'filter/weights',
+'Filter/l1/biases',
+'Filter/l1/weights',
 ]
 
 dim_file = open('%s/dim.dat' % out_dir, 'w')

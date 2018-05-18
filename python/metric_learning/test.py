@@ -10,13 +10,10 @@ if len(sys.argv) < 2:
 
 model_file = sys.argv[1]
 
-filter_data = FilterDataManager()
-flow_data = FlowDataManager()
+filter_data = FilterDataManager(shuffle=False)
+flow_data = FlowDataManager(shuffle=False)
 
-filter_data.make_validation(50)
-flow_data.make_validation(10000)
-
-ml = MetricLearning(filter_data, flow_data)
+ml = MetricLearning()
 ml.restore(model_file)
 
 while True:

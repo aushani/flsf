@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class FlowDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning/'):
+    def __init__(self, path='/home/aushani/data/full_learning/', shuffle=True):
         # only use first 10 for training
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
@@ -78,7 +78,9 @@ class FlowDataManager:
 
         self.idx_at = 0
         self.idxs = np.arange(0, count)
-        np.random.shuffle(self.idxs)
+
+        if shuffle:
+            np.random.shuffle(self.idxs)
 
         self.reserved = [False,] * self.num_samples
 

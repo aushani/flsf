@@ -19,11 +19,11 @@ MatchExtractor::MatchExtractor(const fs::path &base_path, const fs::path &save_p
 
 void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
   // Get bounds
-  int i0 = i - ps::kPatchSize / 2;
-  int i1 = i0 + ps::kPatchSize;
+  int i0 = i - ps::kPatchSize / 2 - 1;
+  int i1 = i0 + ps::kPatchSize + 1;
 
-  int j0 = j - ps::kPatchSize / 2;
-  int j1 = j0 + ps::kPatchSize;
+  int j0 = j - ps::kPatchSize / 2 - 1;
+  int j1 = j0 + ps::kPatchSize + 1;
 
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ + 1; // inclusive

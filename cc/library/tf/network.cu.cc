@@ -259,8 +259,8 @@ Network Network::LoadNetwork(const fs::path &path) {
   //classifier_weights.CopyFrom(Network::LoadFile(path / "classifier_weights.dat"));
   //classifier_biases.CopyFrom(Network::LoadFile(path / "classifier_biases.dat"));
 
-  filter_weights.CopyFrom(Network::LoadFile(path / "filter_weights.dat"));
-  filter_biases.CopyFrom(Network::LoadFile(path / "filter_biases.dat"));
+  filter_weights.CopyFrom(Network::LoadFile(path / "Filter_l1_weights.dat"));
+  filter_biases.CopyFrom(Network::LoadFile(path / "Filter_l1_biases.dat"));
 
   ConvolutionalLayer l1(l1_weights, l1_biases);
   ConvolutionalLayer l2(l2_weights, l2_biases);
