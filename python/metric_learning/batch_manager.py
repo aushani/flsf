@@ -1,4 +1,3 @@
-from data import *
 import threading
 import Queue
 
