@@ -29,6 +29,13 @@ class MetricLearning:
         self.filter_batches = BatchManager(filter_data)
         self.flow_batches = BatchManager(flow_data)
 
+        # Filter weighting
+        num_neg = 12119773.0
+        num_pos = 336639.0
+        denom = num_neg + num_pos
+        self.neg_weight = num_neg / denom
+        self.pos_weight = num_pos / denom
+
         # Inputs
         self.full_occ    = tf.placeholder(tf.float32, shape=[None, self.full_width, self.full_length, self.full_height],
                                           name='full_occ')
@@ -54,23 +61,26 @@ class MetricLearning:
         self.make_filter(self.full_occ)
 
         # Metric distance
-        metric_loss, self.dist, self.pred_patch_prob_fg = self.make_metric_distance(self.patch1, self.patch2,
+        self.metric_loss, self.dist, self.pred_patch_prob_fg = self.make_metric_distance(self.patch1, self.patch2,
                                                                                     self.match, self.err2, self.patch1_filter)
 
         # Loss
-        self.loss = self.normalized_filter_loss + metric_loss
+        self.total_loss = self.normalized_filter_loss + self.metric_loss
 
-        # Optimizer
-        self.opt = tf.train.AdamOptimizer(1e-4)
+        # Optimizers
+        filter_opt = tf.train.AdamOptimizer(1e-4)
+        all_vars = tf.trainable_variables()
+        self.filter_train_step = filter_opt.minimize(self.normalized_filter_loss, var_list = all_vars)
 
-        var_list = tf.trainable_variables()
-        self.train_step = self.opt.minimize(self.loss,  var_list = var_list)
+        metric_dist_opt = tf.train.AdamOptimizer(1e-4)
+        encoder_vars = tf.trainable_variables(scope='Encoder')
+        self.metric_dist_train_step = metric_dist_opt.minimize(self.metric_loss, var_list = encoder_vars)
 
         # Session
         self.sess = tf.Session()
 
         # Summaries
-        metric_loss_sum = tf.summary.scalar('metric distance loss', metric_loss)
+        metric_loss_sum = tf.summary.scalar('metric distance loss', self.metric_loss)
 
         filter_loss_sum = tf.summary.scalar('filter loss', self.normalized_filter_loss)
         filter_acc_sum = tf.summary.scalar('filter accuracy', self.filter_accuracy)
@@ -78,7 +88,7 @@ class MetricLearning:
         bg_acc_sum = tf.summary.scalar('filter accuracy background', self.bg_accuracy)
         fg_acc_sum = tf.summary.scalar('filter accuracy foreground', self.fg_accuracy)
 
-        total_loss_sum = tf.summary.scalar('total loss', self.loss)
+        total_loss_sum = tf.summary.scalar('total loss', self.total_loss)
 
         self.summaries = tf.summary.merge_all()
 
@@ -119,17 +129,26 @@ class MetricLearning:
     def make_filter(self, occ):
         self.pred_filter, self.filter_probs = self.get_filter(occ)
 
-        # Make filter loss
+        is_background = tf.equal(self.filter, 0)
+        is_foreground = tf.equal(self.filter, 1)
         invalid_filter = self.filter < 0
-        num_valid = tf.reduce_sum(tf.cast(tf.logical_not(invalid_filter), tf.float32))
+        valid_filter = tf.logical_not(invalid_filter)
+        num_valid = tf.reduce_sum(tf.cast(valid_filter, tf.float32))
 
+        # Make filter loss
         masked_filter = tf.where(invalid_filter, tf.zeros_like(self.filter), self.filter)
 
         filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=masked_filter,
                                                                      logits=self.pred_filter)
 
-        masked_filter_loss = tf.where(invalid_filter, tf.zeros_like(filter_loss), filter_loss)
-        total_filter_loss = tf.reduce_sum(masked_filter_loss)
+        neg_loss = self.neg_weight * filter_loss
+        pos_loss = self.pos_weight * filter_loss
+
+        neg_filter_loss = tf.where(is_background, neg_loss, tf.zeros_like(neg_loss))
+        pos_filter_loss = tf.where(is_foreground, pos_loss, tf.zeros_like(pos_loss))
+
+        weighted_filter_loss = neg_filter_loss + pos_filter_loss
+        total_filter_loss = tf.reduce_sum(weighted_filter_loss)
         self.normalized_filter_loss = total_filter_loss / num_valid
 
         # Filter accuracy
@@ -140,13 +159,11 @@ class MetricLearning:
 
         self.filter_accuracy = num_correct / num_valid
 
-        is_background = tf.equal(self.filter, 0)
         correct_background = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 0), is_background)
         num_background = tf.reduce_sum(tf.cast(is_background, tf.float32))
         num_background_correct = tf.reduce_sum(tf.cast(correct_background, tf.float32))
         self.bg_accuracy = num_background_correct / num_background
 
-        is_foreground = tf.equal(self.filter, 1)
         correct_foreground = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 1), is_foreground)
         num_foreground = tf.reduce_sum(tf.cast(is_foreground, tf.float32))
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
@@ -297,8 +314,9 @@ class MetricLearning:
 
             if iteration % it_plot == 0:
                 tic = time.time()
-                self.make_metric_plot(self.flow_validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
-                self.make_filter_plot(self.filter_validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
+                self.make_plots(save='%s/res_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_metric_plot(self.flow_validation_set, save='%s/metric_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_filter_plot(self.filter_validation_set, save='%s/filter_%010d.png' % (self.exp_name, iteration / it_plot))
                 toc = time.time()
 
                 print '\tTook %5.3f sec to make plots' % (toc - tic)
@@ -339,12 +357,90 @@ class MetricLearning:
 
                    self.keep_prob:       self.default_keep_prob,
                  }
-            self.train_step.run(session = self.sess, feed_dict = fd)
+            self.filter_train_step.run(session = self.sess, feed_dict = fd)
+            self.metric_dist_train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
 
             t_train += (toc - tic)
 
             iteration += 1
+
+    def make_plots(self, save=None, show=False):
+        # Get Data
+
+        # Flow
+        distances = self.eval_dist(self.flow_validation_set.occ1, self.flow_validation_set.occ2)
+        prob_fg = self.eval_patch_prob_fg(self.flow_validation_set.occ1)
+        match = self.flow_validation_set.match
+        patch_is_foreground = self.flow_validation_set.filter == 1
+
+        # Filter
+        probs = self.eval_filter_prob(self.filter_validation_set.occ)
+
+        true_label = self.filter_validation_set.filter
+
+        prob_background = probs[:, :, :, 0]
+        prob_foreground = probs[:, :, :, 1]
+
+        true_label = true_label.flatten()
+        prob_background = prob_background.flatten()
+        prob_foreground = prob_foreground.flatten()
+
+        is_background = (true_label == 0)
+        is_foreground = (true_label == 1)
+
+        valid = np.logical_or(is_background, is_foreground)
+
+        # Make plots
+        plt.clf()
+        fig = plt.gcf()
+        fig.set_size_inches(20, 20)
+
+        plt.subplot(3, 2, 2)
+        self.make_pr_curve(is_background[valid], prob_background[valid], 'Pos. Class = Background')
+        self.make_pr_curve(is_foreground[valid], prob_foreground[valid], 'Pos. Class = Foreground')
+        plt.grid()
+        plt.title('Filter Performance')
+
+        plt.subplot(3, 2, 1)
+        self.make_match_pr(distances, self.flow_validation_set.match, prob_fg, patch_is_foreground)
+        plt.title('Match Distance PR')
+
+        for i, cumul in enumerate([False, True]):
+            if i == 0:
+                plot_type = 'Histogram'
+            if i == 1:
+                plot_type = 'CDF'
+
+            plt.subplot(3, 2, 3 + 2*i)
+            plt.title('Metric Distance %s' % plot_type)
+            idx_match = match == 1
+            idx_nonmatch = match == 0
+
+            plt.hist(distances[idx_match], bins=100, range=(0, 10.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(distances[idx_nonmatch], bins=100, range=(0, 10.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Distance')
+
+            plt.subplot(3, 2, 4 + 2*i)
+            plt.title('Metric Distance %s (Foreground only)' % plot_type)
+            idx_match = (match == 1) & (patch_is_foreground)
+            idx_nonmatch = (match == 0) & (patch_is_foreground)
+
+            plt.hist(distances[idx_match], bins=100, range=(0, 10.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(distances[idx_nonmatch], bins=100, range=(0, 10.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Distance')
+
+        if save:
+            plt.savefig(save)
+
 
     def make_metric_plot(self, dataset, save=None, show=False):
         distances = self.eval_dist(dataset.occ1, dataset.occ2)
@@ -356,46 +452,33 @@ class MetricLearning:
         fig.set_size_inches(10, 20)
 
         plt.subplot(3, 1, 1)
-        plt.title('PR by Filter Prob')
-        for cutoff in [0.2, 0.4, 0.6, 0.8]:
-            idx = prob_fg > cutoff
-
-            if np.sum(idx) == 0:
-                continue
-
-            dist_c = distances[idx]
-            match_c = dataset.match[idx]
-            n_samples = np.sum(idx)
-
-            self.make_pr_curve(match_c, -dist_c, 'P_fg > %3.1f (%d samples)' % (cutoff, n_samples))
-
-        n_samples = len(dataset.match)
-        self.make_pr_curve(dataset.match, -distances, 'All (%d samples)' % (n_samples))
-        plt.grid()
+        self.make_match_pr(distances, dataset.match, prob_fg, dataset.filter==1)
 
         plt.subplot(3, 1, 2)
-        plt.title('PR By Spatial Distance')
+        plt.title('Metric Distance CDF')
         idx_match = dataset.match == 1
         idx_nonmatch = dataset.match == 0
 
-        plt.hist(distances[idx_match],    bins=100, range=(0, 3.0),
-                histtype='step', label='Matching (%d)' % np.sum(idx_match))
-        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 3.0),
-                histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+        plt.hist(distances[idx_match], bins=100, range=(0, 10.0), cumulative=True,
+                normed=1, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 10.0), cumulative=True,
+                normed=1, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
         plt.legend(loc='upper right')
         plt.grid()
+        plt.xlabel('Distance')
 
         plt.subplot(3, 1, 3)
-        plt.title('PR By Spatial Distance (Foreground only)')
+        plt.title('Metric Distance CDF (Foreground only)')
         idx_match = (dataset.match == 1) & (dataset.filter == 1)
         idx_nonmatch = (dataset.match == 0) & (dataset.filter == 1)
 
-        plt.hist(distances[idx_match],    bins=100, range=(0, 3.0),
-                histtype='step', label='Matching (%d)' % np.sum(idx_match))
-        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 3.0),
-                histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+        plt.hist(distances[idx_match], bins=100, range=(0, 10.0), cumulative=True,
+                normed=1, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+        plt.hist(distances[idx_nonmatch], bins=100, range=(0, 10.0), cumulative=True,
+                normed=1, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
         plt.legend(loc='upper right')
         plt.grid()
+        plt.xlabel('Distance')
 
         if save:
             plt.savefig(save)
@@ -428,6 +511,28 @@ class MetricLearning:
 
         if save:
             plt.savefig(save)
+
+    def make_match_pr(self, distances, match, prob_fg, is_foreground):
+        plt.title('PR by Filter Prob')
+        for cutoff in [0.2, 0.4, 0.6, 0.8]:
+            idx = prob_fg > cutoff
+
+            if np.sum(idx) == 0:
+                continue
+
+            dist_c = distances[idx]
+            match_c = match[idx]
+            n_samples = np.sum(idx)
+
+            self.make_pr_curve(match_c, -dist_c, 'P_fg > %3.1f (%d samples)' % (cutoff, n_samples))
+
+        n_samples = np.sum(is_foreground)
+        self.make_pr_curve(match[is_foreground], -distances[is_foreground], 'All Foreground (%d samples)' % (n_samples))
+
+        n_samples = len(match)
+        self.make_pr_curve(match, -distances, 'All (%d samples)' % (n_samples))
+
+        plt.grid()
 
     def make_pr_curve(self, true_label, pred_label, label):
         precision, recall, thresholds = sklearn.metrics.precision_recall_curve(true_label, pred_label)

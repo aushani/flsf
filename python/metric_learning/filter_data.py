@@ -136,6 +136,21 @@ class FilterDataManager:
 if __name__ == '__main__':
     d = FilterDataManager()
 
+    print 'Have %d samples' % (d.num_samples)
+
+    num_neg = 0
+    num_pos = 0
+
+    for i in range(d.num_samples):
+        sample = d.get_next_sample()
+
+        num_neg += np.sum(sample.filter == 0)
+        num_pos += np.sum(sample.filter == 1)
+
+        print '% 5d / % 5d Have %d positive samples, %d negative samples' % (i, d.num_samples, num_pos, num_neg)
+
+    print 'Have %d positive samples, %d negative samples' % (num_pos, num_neg)
+
     while True:
         sample = d.get_next_sample(augment = False)
 
