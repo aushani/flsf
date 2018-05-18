@@ -68,11 +68,11 @@ class MetricLearning:
         self.total_loss = self.normalized_filter_loss + self.metric_loss
 
         # Optimizers
-        filter_opt = tf.train.AdamOptimizer(1e-4)
+        filter_opt = tf.train.AdamOptimizer(1e-6)
         all_vars = tf.trainable_variables()
         self.filter_train_step = filter_opt.minimize(self.normalized_filter_loss, var_list = all_vars)
 
-        metric_dist_opt = tf.train.AdamOptimizer(1e-4)
+        metric_dist_opt = tf.train.AdamOptimizer(1e-6)
         encoder_vars = tf.trainable_variables(scope='Encoder')
         self.metric_dist_train_step = metric_dist_opt.minimize(self.metric_loss, var_list = encoder_vars)
 
@@ -218,8 +218,10 @@ class MetricLearning:
                               tf.multiply(non_match_weight, non_match_loss),
                               'loss_switch')
 
-        # Weight according to filter prob
-        weighted_loss = tf.multiply(prob_fg, match_loss)
+        # Weight according to filter prob (if it should be background)
+        is_background = true_patch_filter == 0
+        is_foreground = true_patch_filter == 1
+        weighted_loss = tf.where(is_background, tf.multiply(prob_fg, match_loss), match_loss)
         #weighted_loss = tf.multiply(tf.cast(true_patch_filter, tf.float32), match_loss)
 
         # Penalize incorrect filter
