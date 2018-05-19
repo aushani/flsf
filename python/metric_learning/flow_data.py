@@ -52,8 +52,8 @@ class FlowDataManager:
         self.f_ptrs = {}
         self.file_ranges = {}
 
-        self.width = 13
-        self.length = 13
+        self.width = 15
+        self.length = 15
         self.height = 13
 
         self.size_occ = self.width * self.length * self.height

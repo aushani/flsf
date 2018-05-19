@@ -176,11 +176,11 @@ class MetricLearning:
 
         pred_patch_filter, pred_patch_filter_prob = self.get_filter(patch1, padding = 'VALID')
 
-        assert latent1.shape[1] == 1
-        assert latent1.shape[2] == 1
+        assert latent1.shape[1] == 3
+        assert latent1.shape[2] == 3
 
-        assert latent2.shape[1] == 1
-        assert latent2.shape[2] == 1
+        assert latent2.shape[1] == 3
+        assert latent2.shape[2] == 3
 
         assert pred_patch_filter.shape[1] == 1
         assert pred_patch_filter.shape[2] == 1
@@ -188,8 +188,11 @@ class MetricLearning:
         assert pred_patch_filter_prob.shape[1] == 1
         assert pred_patch_filter_prob.shape[2] == 1
 
-        latent1 = tf.squeeze(latent1, axis=[1, 2])
-        latent2 = tf.squeeze(latent2, axis=[1, 2])
+        # Take center encoding
+        latent1 = latent1[:, 1, 1, :]
+        latent2 = latent2[:, 1, 1, :]
+        #latent1 = tf.squeeze(latent1, axis=[1, 2])
+        #latent2 = tf.squeeze(latent2, axis=[1, 2])
 
         pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
         pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
