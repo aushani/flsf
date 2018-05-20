@@ -31,7 +31,6 @@ struct DeviceData {
    distance(167, 167, 31, 31),            // XXX magic numbers
    filter_prob1(167, 167),                // XXX magic numbers
    filter_prob2(167, 167),                // XXX magic numbers
-   //classification_map(167, 167, res),   // XXX magic numbers
    filter_map1(167, 167, res),            // XXX magic numbers
    filter_map2(167, 167, res),            // XXX magic numbers
    distance_map(167, 167, 31, res) {      // XXX magic numbers
@@ -100,13 +99,17 @@ void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
   data_->last_og2 = og;
 
   data_->network.SetInput(og);
-  data_->network.Apply();
-  data_->last_encoding2.CopyFrom(data_->network.GetEncoding());
-  data_->filter_prob2.CopyFrom(data_->network.GetFilterProbability());
+  data_->network.Apply(&data_->last_encoding2, &data_->filter_prob2);
 }
 
-void FlowProcessor::Update(const kt::VelodyneScan &scan) {
+void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
   library::timer::Timer t;
+
+  gu::GpuData<3, float> prev_encoding     = data_->last_encoding2;
+  gu::GpuData<3, float> encoding          = data_->last_encoding1;
+
+  gu::GpuData<2, float> prev_filter_prob  = data_->filter_prob2;
+  gu::GpuData<2, float> filter_prob       = data_->filter_prob1;
 
   // Get occ grid
   t.Start();
@@ -119,42 +122,38 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan) {
   printf("Took %5.3f ms to set occ grid input to network\n", t.GetMs());
 
   t.Start();
-  data_->network.Apply();
+  data_->network.Apply(&encoding, &filter_prob);
   printf("Took %5.3f ms to apply network\n", t.GetMs());
 
-  // Get encoding
-  const auto &encoding = data_->network.GetEncoding();
-  const auto &filter_prob = data_->network.GetFilterProbability();
-
   // Get distance
-  data_->distance_computer.ComputeDistance(data_->last_encoding2, encoding, &data_->distance);
+  data_->distance_computer.ComputeDistance(prev_encoding, encoding, &data_->distance);
 
   // Compute flow
-  auto fi = data_->solver.ComputeFlow(data_->distance, data_->filter_prob2, data_->resolution, iterations_);
+  data_->flow_image = data_->solver.ComputeFlow(data_->distance, filter_prob, data_->resolution, iterations_);
 
-  // Update cached state
+  // Update cached state ////////////
   t.Start();
+
+  // Update
   data_->last_og1 = data_->last_og2;
   data_->last_og2 = og;
 
   // Swap
-  auto tmp_le = data_->last_encoding1;
-  data_->last_encoding1 = data_->last_encoding2;
-  data_->last_encoding2 = tmp_le;
-  data_->last_encoding2.CopyFrom(encoding);
+  data_->last_encoding1 = prev_encoding;
+  data_->last_encoding2 = encoding;
 
   // Swap
-  auto tmp_fp = data_->filter_prob1;
-  data_->filter_prob1 = data_->filter_prob2;
-  data_->filter_prob2 = tmp_fp;
-  data_->filter_prob2.CopyFrom(filter_prob);
-
-  data_->flow_image = fi;
-
-  //UpdateClassificationMap();
-  UpdateFilterMap();
-  UpdateDistanceMap();
+  data_->filter_prob1 = prev_filter_prob;
+  data_->filter_prob2 = filter_prob;
   printf("Took %5.3f ms to update cached state\n", t.GetMs());
+
+  // Copy to host
+  if (copy_data) {
+    t.Start();
+    UpdateFilterMap();
+    UpdateDistanceMap();
+    printf("Took %5.3f ms to copy proccesing data to host\n", t.GetMs());
+  }
 }
 
 void FlowProcessor::Refresh() {

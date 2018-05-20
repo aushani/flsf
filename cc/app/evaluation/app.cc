@@ -67,7 +67,7 @@ void App::Run(const fs::path &save_path) {
     const auto &scan = scans_[scan_at];
 
     timer.Start();
-    flow_processor_.Update(scan);
+    flow_processor_.Update(scan, false); // don't need extra data
     printf("Took %5.3f ms to compute flow\n", timer.GetMs());
 
     // Evaluation

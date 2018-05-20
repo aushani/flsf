@@ -34,7 +34,7 @@ class FlowProcessor {
   int GetIterations() const;
 
   void Initialize(const kt::VelodyneScan &scan);
-  void Update(const kt::VelodyneScan &scan);
+  void Update(const kt::VelodyneScan &scan, bool copy_data = true);
   void Refresh();
 
   rt::OccGrid GetLastOccGrid1() const;

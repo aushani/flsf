@@ -24,20 +24,14 @@ class Network {
   static Network LoadNetwork(const fs::path &path);
 
   void SetInput(const rt::OccGrid &og);
-  const gu::GpuData<3, float>& GetEncoding() const;
-  //const gu::GpuData<3, float>& GetClassification() const;
-  const gu::GpuData<3, float>& GetFilter() const;
-  const gu::GpuData<2, float>& GetFilterProbability() const;
 
-  void Apply();
+  void Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *filter_prob);
 
  private:
   ConvolutionalLayer cl1_;
   ConvolutionalLayer cl2_;
   ConvolutionalLayer cl3_;
   ConvolutionalLayer clatent_;
-
-  //ConvolutionalLayer cl_classifier_;
 
   ConvolutionalLayer cl_filter_;
 
@@ -46,11 +40,8 @@ class Network {
   gu::GpuData<3, float> res_cl1_;
   gu::GpuData<3, float> res_cl2_;
   gu::GpuData<3, float> res_cl3_;
-  gu::GpuData<3, float> res_clatent_;
-  //gu::GpuData<3, float> res_classifier_;
-  gu::GpuData<3, float> res_filter_;
 
-  gu::GpuData<2, float> res_filter_prob_;
+  gu::GpuData<3, float> res_filter_;
 
   Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const
       ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const
@@ -59,7 +50,7 @@ class Network {
   static std::vector<float> LoadFile(const fs::path &path);
   static std::vector<int> LoadDimFile(const fs::path &path);
 
-  void ComputeFilterProbability();
+  void ComputeFilterProbability(gu::GpuData<2, float> *filter_prob);
 };
 
 } // namespace tf
