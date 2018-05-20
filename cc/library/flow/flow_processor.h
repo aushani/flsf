@@ -49,7 +49,7 @@ class FlowProcessor {
  private:
   std::shared_ptr<DeviceData> data_;
 
-  int iterations_ = 1;
+  int iterations_ = 20;
 
   //void UpdateClassificationMap();
   void UpdateFilterMap();

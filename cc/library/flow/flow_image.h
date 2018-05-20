@@ -18,6 +18,7 @@ class FlowImage {
   int MinY() const;
   int MaxY() const;
   bool InRange(int i, int j) const;
+  bool InRangeXY(float x, float y) const;
 
   float GetResolution() const;
 

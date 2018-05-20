@@ -1,9 +1,11 @@
 #pragma once
 
 #include <thread>
+#include <memory>
 
 #include <boost/filesystem.hpp>
 
+#include "library/evaluation/flow_image_evaluator.h"
 #include "library/flow/flow_processor.h"
 #include "library/ray_tracing/occ_grid_builder.h"
 #include "library/kitti/velodyne_scan.h"
@@ -21,6 +23,7 @@ namespace rt = library::ray_tracing;
 namespace kt = library::kitti;
 namespace vw = library::viewer;
 namespace fl = library::flow;
+namespace ev = library::evaluation;
 
 namespace app {
 namespace flow {
@@ -57,6 +60,8 @@ class App {
   CommandQueue command_queue_;
   std::thread command_thread_;
   bool running_ = true;
+
+  std::unique_ptr<ev::FlowImageEvaluator> fi_eval_;
 
   void LoadVelodyneData(const fs::path &tsf_dir, const std::string &date, int log_num);
   void LoadTrackletData(const fs::path &tsf_dir, const std::string &date, int log_num);

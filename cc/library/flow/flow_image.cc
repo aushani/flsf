@@ -46,6 +46,13 @@ bool FlowImage::InRange(int i, int j) const {
   return valid_x && valid_y;
 }
 
+bool FlowImage::InRangeXY(float x, float y) const {
+  int i = std::round(x / resolution_);
+  int j = std::round(y / resolution_);
+
+  return InRange(i, j);
+}
+
 float FlowImage::GetResolution() const {
   return resolution_;
 }

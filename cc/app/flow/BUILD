@@ -2,6 +2,7 @@ cc_binary(
     name = "flow",
     srcs = glob(["*.cc", "*.h"]),
     deps = [
+            "//library/evaluation",
             "//library/kitti",
             "//library/kitti/nodes",
             "//library/ray_tracing",

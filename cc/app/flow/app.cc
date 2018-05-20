@@ -3,6 +3,7 @@
 #include <map>
 
 #include <boost/format.hpp>
+#include <Eigen/Core>
 
 #include "library/kitti/util.h"
 #include "library/timer/timer.h"
@@ -24,6 +25,9 @@ App::App(const fs::path &tsf_dir, const std::string &date, int log_num, int fram
   // Initialize flow processor with first scan
   flow_processor_.Initialize(scans_[scan_at_]);
   printf("Initalized Flow Processor\n");
+
+  // Start up evaluation
+  fi_eval_ = std::make_unique<ev::FlowImageEvaluator>(tracklets_, camera_cal_, sm_poses_);
 
   // Start command processing thread
   command_thread_ = std::thread(&App::ProcessCommands, this);
@@ -124,6 +128,9 @@ void App::Process() {
   node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
   printf("Done\n");
 
+  // Evaluation
+  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
+
   printf("\n\n");
 }
 
@@ -160,6 +167,7 @@ void App::HandleClick(const Command &command) {
 
   double x = command.GetClickX();
   double y = command.GetClickY();
+  Eigen::Vector2f pos1(x, y);
 
   printf("Click at %f, %f\n", x, y);
 
@@ -169,18 +177,38 @@ void App::HandleClick(const Command &command) {
     printf("NOT In camera view\n");
   }
 
+  const auto &fm = flow_processor_.GetFilterMap1();
+  const auto &fi = flow_processor_.GetFlowImage();
+
+  if (!fi.InRangeXY(x, y)) {
+    printf("Out of range\n");
+    return;
+  } else {
+    printf("In range\n");
+  }
+
   node_manager_.ShowDistanceMap(flow_processor_, x, y);
 
   // Get filter result
-  const auto &fm = flow_processor_.GetFilterMap1();
   float prob = fm.GetFilterProbabilityXY(x, y);
 
   printf("Filter prob: %5.3f %%\n", prob * 100.0);
 
+  kt::ObjectClass oc = kt::GetObjectTypeAtLocation(&tracklets_, pos1, scan_at_ - 1, fm.GetResolution());
+  printf("Object is %s\n", kt::ObjectClassToString(oc).c_str());
+
   // Get flow result
-  const auto &fi = flow_processor_.GetFlowImage();
-  printf("Flow is %d %d (%s)\n", fi.GetXFlowXY(x, y), fi.GetYFlowXY(x, y),
+  double res = fi.GetResolution();
+  printf("Flow is %f %f (%s)\n", fi.GetXFlowXY(x, y)*res, fi.GetYFlowXY(x, y)*res,
                                  fi.GetFlowValidXY(x, y) ? "valid":"not valid");
+
+  // Get ground truth
+  const kt::Pose pose1 = sm_poses_[scan_at_ - 1];
+  const kt::Pose pose2 = sm_poses_[scan_at_];
+  Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, scan_at_ - 1, scan_at_, pose1, pose2);
+  Eigen::Vector2f flow = pos2 - pos1;
+
+  printf("True flow is %f %f\n", flow.x(), flow.y());
 }
 
 void App::HandleClearDistanceMap(const Command &command) {
