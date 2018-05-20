@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 
   printf("Running evaluation\n");
   app::evaluation::App eval(fs::path(tsf_data_dir), kitti_log_date, log_num);
-  eval.Run(save_path / "eval.csv");
+  eval.Run(save_path);
 
   printf("\nDone\n");
 
