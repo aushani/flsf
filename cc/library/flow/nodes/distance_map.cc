@@ -46,7 +46,6 @@ void DistanceMap::Update(const fl::DistanceMap &dm, float x, float y) {
 
   osg::ref_ptr<osg::Geode> geode = new osg::Geode();
 
-
   int width = dm.MaxOffset() - dm.MinOffset() + 1;
   int height = width;
 
@@ -101,6 +100,7 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
   int best_i = 0;
   int best_j = 0;
   double best_dist = -1;
+  double highest_dist = 0;
 
   for (int i = 0; i < width; i++) {
     for (int j = 0; j < height; j++) {
@@ -126,8 +126,14 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
         best_j = j;
         best_dist = dist;
       }
+
+      if (dist > highest_dist) {
+        highest_dist = dist;
+      }
     }
   }
+
+  printf("Dist ranges from %f to %f\n", best_dist, highest_dist);
 
   double val = best_dist / kDistScaleFactor_;
 

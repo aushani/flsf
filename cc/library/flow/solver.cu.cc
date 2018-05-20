@@ -278,7 +278,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   blocks.z = 1;
 
   gu::GpuData<4, float>  energy(dist_sq.GetDim(0), dist_sq.GetDim(1), dist_sq.GetDim(2), dist_sq.GetDim(3));
-  float w_p = 0.0001;
+  float w_p = 0.1;
 
   flow_valid_.Clear();
 

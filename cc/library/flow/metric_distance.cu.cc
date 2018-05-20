@@ -44,7 +44,7 @@ __global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData
     }
   }
 
-  res(i1, j1, tidx, tidy) = dist_sq;
+  res(i1, j1, tidx, tidy) = sqrt(dist_sq);
 }
 
 void MetricDistance::ComputeDistance(const gu::GpuData<3, float> &d1,

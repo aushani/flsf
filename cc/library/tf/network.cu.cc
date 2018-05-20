@@ -175,7 +175,14 @@ __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, fl
 
   float s1 = res(idx_i, idx_j, 0);
   float s2 = res(idx_i, idx_j, 1);
-  float denom = exp(s1) + exp(s2);
+
+  // For scaling
+  s1 -= s2;
+  s2 -= s2;
+
+  //float denom = exp(s1) + exp(s2);
+  float denom = exp(s1) + 1;
+
   float p_filter = exp(s1)/denom;
 
   prob(idx_i, idx_j) = p_filter;
