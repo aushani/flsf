@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <boost/filesystem.hpp>
+
 #include "library/flow/flow_image.h"
 
 #include "library/kitti/camera_cal.h"
@@ -10,6 +12,7 @@
 
 namespace kt = library::kitti;
 namespace fl = library::flow;
+namespace fs = boost::filesystem;
 
 namespace library {
 namespace evaluation {
@@ -22,10 +25,14 @@ class FlowImageEvaluator {
 
   void Clear();
 
+  void WriteErrors(const fs::path &path);
+
  private:
   kt::Tracklets tracklets_;
   kt::CameraCal camera_cal_;
   std::vector<kt::Pose> poses_;
+
+  std::vector<float> errors_;
 
   double total_err_ = 0.0;
   int count_ = 0;

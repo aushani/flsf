@@ -1,5 +1,8 @@
 #include "library/evaluation/flow_image_evaluator.h"
 
+#include <iostream>
+#include <fstream>
+
 #include <Eigen/Core>
 
 #include "library/kitti/util.h"
@@ -63,6 +66,8 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int
 
       total_err_ += err.norm();
       count_++;
+
+      errors_.push_back(err.norm());
     }
   }
 
@@ -72,6 +77,16 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int
 void FlowImageEvaluator::Clear() {
   total_err_ = 0.0;
   count_ = 0;
+
+  errors_.clear();
+}
+
+void FlowImageEvaluator::WriteErrors(const fs::path &path) {
+  std::ofstream file(path.string());
+
+  for (const float err : errors_) {
+    file << err << std::endl;
+  }
 }
 
 } // namespace evaluation

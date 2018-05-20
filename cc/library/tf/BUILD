@@ -10,6 +10,7 @@ cc_library(
             "//library/params",
             "//library/util",
             "//library/ray_tracing:ray_tracing_cuda",
+            "//library/ray_tracing",
             "//tools:cuda",
             "@boost//:boost_headers",
             "@boost//:boost_filesystem",
