@@ -54,9 +54,11 @@ class NodeManager {
   osg::ref_ptr<rtn::OccGrid> og1n_;
   osg::ref_ptr<rtn::OccGrid> og2n_;
 
+  osg::ref_ptr<fln::FilterMap> fmn1_;
+  osg::ref_ptr<fln::FilterMap> fmn2_;
+
   osg::ref_ptr<fln::FlowImage> fin_;
   //osg::ref_ptr<fln::ClassificationMap> cmn_;
-  osg::ref_ptr<fln::FilterMap> fmn_;
 
   osg::ref_ptr<fln::DistanceMap> dmn_;
 

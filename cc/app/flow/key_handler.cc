@@ -94,6 +94,16 @@ bool KeyHandler::KeyPress(const osgGA::GUIEventAdapter& ea) {
       app_->QueueCommand(command);
       return true;
     }
+
+    if (key == osgGA::GUIEventAdapter::KeySymbol::KEY_6) {
+      int view_mode = 6;
+
+      Command command(Type::VIEW_MODE);
+      command.SetViewMode(view_mode);
+
+      app_->QueueCommand(command);
+      return true;
+    }
   }
 
   return false;

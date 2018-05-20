@@ -12,9 +12,9 @@ NodeManager::NodeManager(const fs::path &car_path) :
  tn2_(new ktn::Tracklets()),
  og1n_(new rtn::OccGrid()),
  og2n_(new rtn::OccGrid()),
+ fmn1_(new fln::FilterMap()),
+ fmn2_(new fln::FilterMap()),
  fin_(new fln::FlowImage()),
- //cmn_(new fln::ClassificationMap()),
- fmn_(new fln::FilterMap()),
  dmn_(new fln::DistanceMap()),
  car_node_(new osgn::Car(car_path)) {
 }
@@ -26,9 +26,9 @@ void NodeManager::SetViewer(const std::shared_ptr<vw::Viewer> &viewer) {
   viewer->AddChild(tn2_);
   viewer->AddChild(og1n_);
   viewer->AddChild(og2n_);
+  viewer->AddChild(fmn1_);
+  viewer->AddChild(fmn2_);
   viewer->AddChild(fin_);
-  //viewer->AddChild(cmn_);
-  viewer->AddChild(fmn_);
   viewer->AddChild(dmn_);
   viewer->AddChild(car_node_);
 
@@ -53,9 +53,10 @@ void NodeManager::UpdateViewer() {
     og1n_->Render(true);
     og2n_->Render(false);
 
+    fmn1_->Render(false);
+    fmn2_->Render(false);
+
     fin_->Render(true);
-    //cmn_->Render(false);
-    fmn_->Render(false);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 2) {
@@ -68,9 +69,10 @@ void NodeManager::UpdateViewer() {
     og1n_->Render(false);
     og2n_->Render(true);
 
+    fmn1_->Render(false);
+    fmn2_->Render(false);
+
     fin_->Render(true);
-    //cmn_->Render(false);
-    fmn_->Render(false);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 3) {
@@ -83,27 +85,13 @@ void NodeManager::UpdateViewer() {
     og1n_->Render(false);
     og2n_->Render(false);
 
+    fmn1_->Render(true);
+    fmn2_->Render(false);
+
     fin_->Render(false);
-    //cmn_->Render(true);
-    fmn_->Render(true);
 
     //car_node_->Render(true);
   } else if (view_mode_ == 4) {
-    pc1_->Render(true);
-    pc2_->Render(false);
-
-    tn1_->Render(false);
-    tn2_->Render(false);
-
-    og1n_->Render(false);
-    og2n_->Render(false);
-
-    fin_->Render(false);
-    //cmn_->Render(false);
-    fmn_->Render(false);
-
-    //car_node_->Render(true);
-  } else if (view_mode_ == 5) {
     pc1_->Render(false);
     pc2_->Render(true);
 
@@ -113,9 +101,42 @@ void NodeManager::UpdateViewer() {
     og1n_->Render(false);
     og2n_->Render(false);
 
+    fmn1_->Render(false);
+    fmn2_->Render(true);
+
     fin_->Render(false);
-    //cmn_->Render(false);
-    fmn_->Render(false);
+
+    //car_node_->Render(true);
+  } else if (view_mode_ == 5) {
+    pc1_->Render(true);
+    pc2_->Render(false);
+
+    tn1_->Render(false);
+    tn2_->Render(false);
+
+    og1n_->Render(false);
+    og2n_->Render(false);
+
+    fmn1_->Render(false);
+    fmn2_->Render(false);
+
+    fin_->Render(false);
+
+    //car_node_->Render(true);
+  } else if (view_mode_ == 6) {
+    pc1_->Render(false);
+    pc2_->Render(true);
+
+    tn1_->Render(false);
+    tn2_->Render(false);
+
+    og1n_->Render(false);
+    og2n_->Render(false);
+
+    fmn1_->Render(false);
+    fmn2_->Render(false);
+
+    fin_->Render(false);
 
     //car_node_->Render(true);
   }
@@ -157,7 +178,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   //printf("Classification Map took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  fmn_->Update(fp.GetFilterMap1());
+  fmn1_->Update(fp.GetFilterMap1());
+  fmn2_->Update(fp.GetFilterMap2());
   printf("Filter map took %5.3f ms to render\n", t.GetMs());
 
   viewer_->Unlock();
