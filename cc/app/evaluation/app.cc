@@ -76,7 +76,7 @@ void App::Run(const fs::path &save_path) {
     printf("\n\n");
   }
 
-  eval.WriteErrors(save_path);
+  eval.WriteErrors(save_path / "eval.csv");
 }
 
 } // evaluation
