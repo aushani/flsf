@@ -102,7 +102,7 @@ class MetricLearning:
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 5,
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 3,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l2')
             l2_do = tf.nn.dropout(l2, self.keep_prob)
 
