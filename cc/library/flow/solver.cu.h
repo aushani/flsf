@@ -24,7 +24,7 @@ class Solver {
 
   const int n_window_;
 
-  gu::GpuData<4, float>  energy_;
+  gu::GpuData<2, float>  energy_;
   gu::GpuData<2, float>  energy_hat_;
   gu::GpuData<3, int>    flow_est_;
   gu::GpuData<2, int>    flow_valid_;

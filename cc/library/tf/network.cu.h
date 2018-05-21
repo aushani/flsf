@@ -27,6 +27,8 @@ class Network {
 
   void Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *filter_prob);
 
+  int GetEncodingDim() const;
+
  private:
   ConvolutionalLayer cl1_;
   ConvolutionalLayer cl2_;

@@ -58,11 +58,11 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int
 
       Eigen::Vector2f err = true_flow - pred_flow;
 
-      printf("%d %d\n", i, j);
-      printf("true is %f %f\n", true_flow.x(), true_flow.y());
-      printf("pred is %f %f\n", pred_flow.x(), pred_flow.y());
-      printf("error is %f %f\n", err.x(), err.y());
-      printf("\n");
+      //printf("%d %d\n", i, j);
+      //printf("true is %f %f\n", true_flow.x(), true_flow.y());
+      //printf("pred is %f %f\n", pred_flow.x(), pred_flow.y());
+      //printf("error is %f %f\n", err.x(), err.y());
+      //printf("\n");
 
       total_err_ += err.norm();
       count_++;

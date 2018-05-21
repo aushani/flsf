@@ -180,6 +180,10 @@ void Network::ComputeFilterProbability(gu::GpuData<2, float> *filter_prob) {
   BOOST_ASSERT(err == cudaSuccess);
 }
 
+int Network::GetEncodingDim() const {
+  return clatent_.GetOutputLayers();
+}
+
 // Load from file
 std::vector<float> Network::LoadFile(const fs::path &path) {
   std::vector<float> data;

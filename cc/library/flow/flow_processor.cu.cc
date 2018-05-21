@@ -25,15 +25,15 @@ struct DeviceData {
    og_builder(max_obs, res, max_range),
    network(tf::Network::LoadNetwork(data_path)),
    distance_computer(),
-   solver(167, 167, 31),                  // XXX magic numbers
-   last_encoding1(167, 167, 10),          // XXX magic numbers
-   last_encoding2(167, 167, 10),          // XXX magic numbers
-   distance(167, 167, 31, 31),            // XXX magic numbers
-   filter_prob1(167, 167),                // XXX magic numbers
-   filter_prob2(167, 167),                // XXX magic numbers
-   filter_map1(167, 167, res),            // XXX magic numbers
-   filter_map2(167, 167, res),            // XXX magic numbers
-   distance_map(167, 167, 31, res) {      // XXX magic numbers
+   solver(167, 167, 31),                                  // XXX magic numbers
+   last_encoding1(167, 167, network.GetEncodingDim()),    // XXX magic numbers
+   last_encoding2(167, 167, network.GetEncodingDim()),    // XXX magic numbers
+   distance(167, 167, 31, 31),                            // XXX magic numbers
+   filter_prob1(167, 167),                                // XXX magic numbers
+   filter_prob2(167, 167),                                // XXX magic numbers
+   filter_map1(167, 167, res),                            // XXX magic numbers
+   filter_map2(167, 167, res),                            // XXX magic numbers
+   distance_map(167, 167, 31, res) {                      // XXX magic numbers
     last_encoding1.SetCoalesceDim(0);
     last_encoding2.SetCoalesceDim(0);
 

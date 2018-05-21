@@ -10,7 +10,7 @@ Solver::Solver(int nx, int ny, int n_window) :
  nx_(nx),
  ny_(ny),
  n_window_(n_window),
- energy_(nx, ny, n_window, n_window),
+ energy_(nx, ny),
  energy_hat_(nx, ny),
  flow_est_(nx, ny, 2),
  flow_valid_(nx, ny) {
@@ -20,7 +20,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
                             const gu::GpuData<2, float> filter_prob,
                             gu::GpuData<3, int> flow_est,
                             gu::GpuData<2, int> flow_valid,
-                            gu::GpuData<4, float> energy,
+                            gu::GpuData<2, float> energy,
                             float w_p) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
@@ -49,14 +49,53 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
   }
 
   // Now compute energies
-  int best_di = 0;
-  int best_dj = 0;
+  int best_du = 0;
+  int best_dv = 0;
   float best_energy = 0;
   bool valid = false;
 
-  for (int di=0; di<dist_sq.GetDim(2); di++) {
-    for (int dj=0; dj<dist_sq.GetDim(3); dj++) {
-      float d2 = dist_sq(i_from, j_from, di, dj);
+  // Smoothing terms
+  int sum_u2 = 0;
+  int sum_v2 = 0;
+
+  int sum_u = 0;
+  int sum_v = 0;
+
+  int count = 0;
+
+  // Init smoothing terms
+  int i_n, j_n;
+  int u_n, v_n;
+
+  for (int du=-2; du<=2; du++) {
+    i_n = i_from + du;
+    for (int dv=-2; dv<=2; dv++) {
+      if (du==0 && dv==0) {
+        continue;
+      }
+
+      j_n = j_from + dv;
+
+      if (!flow_valid(i_n, j_n)) {
+        continue;
+      }
+
+      u_n = flow_est(i_n, j_n, 0);
+      v_n = flow_est(i_n, j_n, 1);
+
+      sum_u2 += u_n*u_n;
+      sum_v2 += v_n*v_n;
+
+      sum_u += u_n;
+      sum_v += v_n;
+
+      count++;
+    }
+  }
+
+  for (int du=0; du<dist_sq.GetDim(2); du++) {
+    for (int dv=0; dv<dist_sq.GetDim(3); dv++) {
+      float d2 = dist_sq(i_from, j_from, du, dv);
 
       if (d2 < 0) {
         continue;
@@ -66,52 +105,39 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
 
       // Add smoothing
       if (w_p > 0) {
-        for (int i2 = i_from-2; i2 <= i_from+2; i2++) {
-          for (int j2 = j_from-2; j2 <= j_from+2; j2++) {
-            if (!flow_valid.InRange(i2, j2)) {
-              continue;
-            }
+        float smoothness_score = 0.0;
 
-            if (!flow_valid(i2, j2)) {
-              continue;
-            }
+        smoothness_score += sum_u2 + sum_v2;
+        smoothness_score += count * (du*du + dv*dv);
+        smoothness_score += -2 * (du*sum_u + dv*sum_v);
 
-            int di2 = flow_est(i2, j2, 0);
-            int dj2 = flow_est(i2, j2, 1);
-
-            float dx = (di - di2);
-            float dy = (dj - dj2);
-
-            float d_flow = dx*dx + dy*dy;
-
-            my_energy += w_p * d_flow;
-          }
-        }
+        my_energy += w_p * smoothness_score;
       }
-
-      energy(i_from, j_from, di, dj) = my_energy;
 
       // Update best
       if (my_energy < best_energy || !valid) {
         valid = true;
 
-        best_di = di;
-        best_dj = dj;
+        best_du = du;
+        best_dv = dv;
         best_energy = my_energy;
       }
     }
   }
 
-  flow_est(i_from, j_from, 0) = best_di;
-  flow_est(i_from, j_from, 1) = best_dj;
+  flow_est(i_from, j_from, 0) = best_du;
+  flow_est(i_from, j_from, 1) = best_dv;
 
   flow_valid(i_from, j_from) = valid;
+
+  energy(i_from, j_from) = best_energy;
 }
 
-__global__ void Maximization(const gu::GpuData<4, float> energy,
+__global__ void Maximization(const gu::GpuData<2, float> energy,
                              gu::GpuData<2, float> energy_hat,
                              const gu::GpuData<3, int> flow_est,
-                             gu::GpuData<2, int> flow_valid) {
+                             gu::GpuData<2, int> flow_valid,
+                             int n_window) {
   const int bidx = blockIdx.x;
   const int bidy = blockIdx.y;
 
@@ -135,10 +161,10 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
   float best_energy = -1;
   bool valid = false;
 
-  for (int di=0; di<energy.GetDim(2); di++) {
-    for (int dj=0; dj<energy.GetDim(3); dj++) {
-      int i_from = i_dest - (di - energy.GetDim(2)/2);
-      int j_from = j_dest - (dj - energy.GetDim(3)/2);
+  for (int di=0; di<n_window; di++) {
+    for (int dj=0; dj<n_window; dj++) {
+      int i_from = i_dest - (di - n_window/2);
+      int j_from = j_dest - (dj - n_window/2);
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -148,8 +174,8 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
       if (flow_valid(i_from, j_from) &&
           flow_est(i_from, j_from, 0) == di &&
           flow_est(i_from, j_from, 1) == dj &&
-          (energy(i_from, j_from, di, dj) < best_energy || !valid)) {
-        best_energy = energy(i_from, j_from, di, dj);
+          (energy(i_from, j_from) < best_energy || !valid)) {
+        best_energy = energy(i_from, j_from);
         best_i_from = i_from;
         best_j_from = j_from;
         valid = true;
@@ -165,10 +191,10 @@ __global__ void Maximization(const gu::GpuData<4, float> energy,
   energy_hat(i_dest, j_dest) = best_energy;
 
   // Invalidate other flows
-  for (int di=0; di<energy.GetDim(2); di++) {
-    for (int dj=0; dj<energy.GetDim(3); dj++) {
-      int i_from = i_dest - (di - energy.GetDim(2)/2);
-      int j_from = j_dest - (dj - energy.GetDim(3)/2);
+  for (int di=0; di<n_window; di++) {
+    for (int dj=0; dj<n_window; dj++) {
+      int i_from = i_dest - (di - n_window/2);
+      int j_from = j_dest - (dj - n_window/2);
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -277,27 +303,31 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   blocks.y = std::ceil( static_cast<float>(dist_sq.GetDim(1)) / threads.y);
   blocks.z = 1;
 
-  gu::GpuData<4, float>  energy(dist_sq.GetDim(0), dist_sq.GetDim(1), dist_sq.GetDim(2), dist_sq.GetDim(3));
-  float w_p = 0.1;
+  float w_p = 10;
 
   flow_valid_.Clear();
 
   timer.Start();
   //FlowKernel<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_);
+  library::timer::Timer t;
   for (int iter = 0; iter<iters; iter++) {
-    printf("Expectation\n");
-    Expectation<<<blocks, threads>>>(dist_sq, filter_prob, flow_est_, flow_valid_, energy, iter == 0 ? -1.0:w_p);
+
+    t.Start();
+    Expectation<<<blocks, threads>>>(dist_sq, filter_prob, flow_est_, flow_valid_, energy_, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
+    printf("Expectation took %5.3f ms\n", t.GetMs());
 
-    printf("Maximization\n");
-    Maximization<<<blocks, threads>>>(energy, energy_hat_, flow_est_, flow_valid_);
+    t.Start();
+    Maximization<<<blocks, threads>>>(energy_, energy_hat_, flow_est_, flow_valid_, n_window_);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
+    printf("Maximization took %5.3f ms\n", t.GetMs());
   }
   printf("Took %5.3f ms to evaluate EM flow\n", timer.GetMs());
 
   // Copy from device
+  timer.Start();
   gu::HostData<3, int> h_res(flow_est_);
   gu::HostData<2, int> h_valid(flow_valid_);
 
@@ -315,6 +345,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
       fi.SetFlowValid(ii, jj, h_valid(i, j) == 1);
     }
   }
+  printf("Took %5.3f ms to copy from device\n", timer.GetMs());
 
   return fi;
 }
