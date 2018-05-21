@@ -27,7 +27,7 @@ class MetricLearning:
             self.flow_validation_set = flow_data.validation_set
             self.flow_batches = BatchManager(flow_data)
 
-        self.latent_dim = 10
+        self.latent_dim = 25
 
         self.default_keep_prob = 0.5
 
@@ -98,15 +98,15 @@ class MetricLearning:
         with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
             occ_do = tf.nn.dropout(occ, self.keep_prob)
 
-            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 100, kernel_size = 9,
+            l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 200, kernel_size = 9,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 50, kernel_size = 3,
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 5,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l2')
             l2_do = tf.nn.dropout(l2, self.keep_prob)
 
-            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 25, kernel_size = 3,
+            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 50, kernel_size = 3,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l3')
             l3_do = tf.nn.dropout(l3, self.keep_prob)
 
@@ -200,12 +200,12 @@ class MetricLearning:
         prob_fg = pred_patch_filter_prob[:, 1]
 
         # Spatial distance between patch1 and path2 (in grid dimensions)
-        err = tf.sqrt(err2)
-        err_thresh = 2.0           # 0.6 meters
+        #err = tf.sqrt(err2)
+        #err_thresh = 1.0           # 0.3 meters
 
         # Soft weights
-        match_weight = tf.clip_by_value(err_thresh - err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
-        non_match_weight = tf.clip_by_value(err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
+        #match_weight = tf.clip_by_value(err_thresh - err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
+        #non_match_weight = tf.clip_by_value(err, clip_value_min=0, clip_value_max=err_thresh)/err_thresh
 
         metric_dist2 = tf.reduce_sum(tf.squared_difference(latent1, latent2), axis=1)
         metric_dist = tf.sqrt(metric_dist2)
@@ -216,17 +216,14 @@ class MetricLearning:
         match_loss = metric_dist2
 
         # Select which loss according to match flag
-        match_flag = match > 0
-        match_loss = tf.where(match_flag,
-                              tf.multiply(match_weight, match_loss),
-                              tf.multiply(non_match_weight, non_match_loss),
-                              'loss_switch')
+        is_match = match > 0
+        metric_dist_loss = tf.where(is_match, match_loss, non_match_loss, 'loss_switch')
 
         # Weight according to filter prob (if it should be background)
         is_background = true_patch_filter == 0
         is_foreground = true_patch_filter == 1
-        weighted_loss = tf.where(is_background, tf.multiply(prob_fg, match_loss), match_loss)
-        #weighted_loss = tf.multiply(tf.cast(true_patch_filter, tf.float32), match_loss)
+        #weighted_loss = tf.where(is_background, tf.multiply(prob_fg, match_loss), match_loss)
+        weighted_loss = tf.where(is_background, 0.1*metric_dist_loss, metric_dist_loss)
 
         # Penalize incorrect filter
         filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_patch_filter,
