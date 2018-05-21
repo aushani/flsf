@@ -34,9 +34,9 @@ class MetricLearning:
         # Filter weighting
         num_neg = 12119773.0
         num_pos = 336639.0
-        denom = num_neg + num_pos
-        self.neg_weight = num_neg / denom
-        self.pos_weight = num_pos / denom
+        denom = 1.0 / num_neg + 1.0 / num_pos
+        self.neg_weight = (1.0 / num_neg) / denom
+        self.pos_weight = (1.0 / num_pos) / denom
 
         # Inputs
         self.full_occ    = tf.placeholder(tf.float32, shape=[None, self.full_width, self.full_length, self.full_height],
