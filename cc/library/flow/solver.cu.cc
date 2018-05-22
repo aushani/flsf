@@ -16,7 +16,7 @@ Solver::Solver(int nx, int ny, int n_window) :
  flow_valid_(nx, ny) {
 }
 
-__global__ void Expectation(const gu::GpuData<4, float> dist_sq,
+__global__ void Expectation(const gu::GpuData<4, float> dist,
                             const gu::GpuData<2, float> filter_prob,
                             gu::GpuData<3, int> flow_est,
                             gu::GpuData<2, int> flow_valid,
@@ -76,6 +76,10 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
 
       j_n = j_from + dv;
 
+      if (!flow_valid.InRange(i_n, j_n)) {
+        continue;
+      }
+
       if (!flow_valid(i_n, j_n)) {
         continue;
       }
@@ -93,9 +97,9 @@ __global__ void Expectation(const gu::GpuData<4, float> dist_sq,
     }
   }
 
-  for (int du=0; du<dist_sq.GetDim(2); du++) {
-    for (int dv=0; dv<dist_sq.GetDim(3); dv++) {
-      float d2 = dist_sq(i_from, j_from, du, dv);
+  for (int du=0; du<dist.GetDim(2); du++) {
+    for (int dv=0; dv<dist.GetDim(3); dv++) {
+      float d2 = dist(i_from, j_from, du, dv);
 
       if (d2 < 0) {
         continue;
@@ -215,7 +219,7 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
   }
 }
 
-__global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
+__global__ void FlowKernel(const gu::GpuData<4, float> dist,
                            const gu::GpuData<3, float> filter,
                            gu::GpuData<3, int> flow_est,
                            gu::GpuData<2, int> flow_valid) {
@@ -231,7 +235,7 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   const int i = i0 + tidx;
   const int j = j0 + tidy;
 
-  if (i >= dist_sq.GetDim(0) || j >= dist_sq.GetDim(1)) {
+  if (i >= dist.GetDim(0) || j >= dist.GetDim(1)) {
     return;
   }
 
@@ -256,9 +260,9 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   float best_d2 = 0;
   bool first = true;
 
-  for (int di=0; di<dist_sq.GetDim(2); di++) {
-    for (int dj=0; dj<dist_sq.GetDim(3); dj++) {
-      float d2 = dist_sq(i, j, di, dj);
+  for (int di=0; di<dist.GetDim(2); di++) {
+    for (int dj=0; dj<dist.GetDim(3); dj++) {
+      float d2 = dist(i, j, di, dj);
 
       if (d2 < 0) {
         continue;
@@ -280,14 +284,14 @@ __global__ void FlowKernel(const gu::GpuData<4, float> dist_sq,
   flow_valid(i, j) = 1;
 }
 
-FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
+FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
                               const gu::GpuData<2, float> &filter_prob,
                               float resolution,
                               int iters) {
   library::timer::Timer timer;
 
-  BOOST_ASSERT(dist_sq.GetDim(0) == nx_);
-  BOOST_ASSERT(dist_sq.GetDim(1) == ny_);
+  BOOST_ASSERT(dist.GetDim(0) == nx_);
+  BOOST_ASSERT(dist.GetDim(1) == ny_);
 
   BOOST_ASSERT(filter_prob.GetDim(0) == nx_);
   BOOST_ASSERT(filter_prob.GetDim(1) == ny_);
@@ -299,21 +303,21 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
   threads.z = 1;
 
   dim3 blocks;
-  blocks.x = std::ceil( static_cast<float>(dist_sq.GetDim(0)) / threads.x);
-  blocks.y = std::ceil( static_cast<float>(dist_sq.GetDim(1)) / threads.y);
+  blocks.x = std::ceil( static_cast<float>(dist.GetDim(0)) / threads.x);
+  blocks.y = std::ceil( static_cast<float>(dist.GetDim(1)) / threads.y);
   blocks.z = 1;
 
-  float w_p = 10;
+  float w_p = 0.01;
 
   flow_valid_.Clear();
 
   timer.Start();
-  //FlowKernel<<<blocks, threads>>>(dist_sq, filter, flow_est_, flow_valid_);
+  //FlowKernel<<<blocks, threads>>>(dist, filter, flow_est_, flow_valid_);
   library::timer::Timer t;
   for (int iter = 0; iter<iters; iter++) {
 
     t.Start();
-    Expectation<<<blocks, threads>>>(dist_sq, filter_prob, flow_est_, flow_valid_, energy_, iter == 0 ? -1.0:w_p);
+    Expectation<<<blocks, threads>>>(dist, filter_prob, flow_est_, flow_valid_, energy_, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
     printf("Expectation took %5.3f ms\n", t.GetMs());
@@ -338,8 +342,8 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist_sq,
       int ii = fi.MinX() + i;
       int jj = fi.MinY() + j;
 
-      int flow_x = h_res(i, j, 0) - dist_sq.GetDim(2)/2;
-      int flow_y = h_res(i, j, 1) - dist_sq.GetDim(3)/2;
+      int flow_x = h_res(i, j, 0) - dist.GetDim(2)/2;
+      int flow_y = h_res(i, j, 1) - dist.GetDim(3)/2;
 
       fi.SetFlow(ii, jj, flow_x, flow_y);
       fi.SetFlowValid(ii, jj, h_valid(i, j) == 1);

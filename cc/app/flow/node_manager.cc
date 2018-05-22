@@ -79,7 +79,7 @@ void NodeManager::UpdateViewer() {
     pc1_->Render(true);
     pc2_->Render(false);
 
-    tn1_->Render(false);
+    tn1_->Render(true);
     tn2_->Render(false);
 
     og1n_->Render(false);
@@ -96,7 +96,7 @@ void NodeManager::UpdateViewer() {
     pc2_->Render(true);
 
     tn1_->Render(false);
-    tn2_->Render(false);
+    tn2_->Render(true);
 
     og1n_->Render(false);
     og2n_->Render(false);

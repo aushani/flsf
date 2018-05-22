@@ -77,12 +77,20 @@ void FlowImage::SetFlowValid(int i, int j, bool valid) {
 int FlowImage::GetXFlow(int i, int j) const {
   BOOST_ASSERT(InRange(i, j));
 
+  if (!GetFlowValid(i, j)) {
+    return 0;
+  }
+
   size_t idx = GetIdx(i, j);
   return x_flow_[idx];
 }
 
 int FlowImage::GetYFlow(int i, int j) const {
   BOOST_ASSERT(InRange(i, j));
+
+  if (!GetFlowValid(i, j)) {
+    return 0;
+  }
 
   size_t idx = GetIdx(i, j);
   return y_flow_[idx];

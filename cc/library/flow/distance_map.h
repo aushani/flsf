@@ -26,6 +26,7 @@ class DistanceMap {
   float GetResolution() const;
 
   float GetDistance(int i, int j, int di, int dj) const;
+  float GetDistanceXY(float x, float y, float dx, float dy) const;
 
  private:
   size_t size_x_;

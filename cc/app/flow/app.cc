@@ -179,6 +179,7 @@ void App::HandleClick(const Command &command) {
 
   const auto &fm = flow_processor_.GetFilterMap1();
   const auto &fi = flow_processor_.GetFlowImage();
+  const auto &dm = flow_processor_.GetDistanceMap();
 
   if (!fi.InRangeXY(x, y)) {
     printf("Out of range\n");
@@ -209,6 +210,9 @@ void App::HandleClick(const Command &command) {
   Eigen::Vector2f flow = pos2 - pos1;
 
   printf("True flow is %f %f\n", flow.x(), flow.y());
+
+  printf("Distance at true flow is      %f\n", dm.GetDistanceXY(x, y, flow.x(), flow.y()));
+  printf("Distance at estimated flow is %f\n", dm.GetDistanceXY(x, y, fi.GetXFlowXY(x, y)*res, fi.GetYFlowXY(x, y)*res));
 }
 
 void App::HandleClearDistanceMap(const Command &command) {

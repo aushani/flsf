@@ -77,5 +77,15 @@ float DistanceMap::GetDistance(int i, int j, int di, int dj) const {
   return distances_[idx];
 }
 
+float DistanceMap::GetDistanceXY(float x, float y, float dx, float dy) const {
+  int i = std::round(x / resolution_);
+  int j = std::round(y / resolution_);
+
+  int di = std::round(dx / resolution_);
+  int dj = std::round(dy / resolution_);
+
+  return GetDistance(i, j, di, dj);
+}
+
 } // flow
 } // library
