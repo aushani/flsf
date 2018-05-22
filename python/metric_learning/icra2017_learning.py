@@ -221,7 +221,6 @@ if __name__ == '__main__':
     flow_dm.make_validation(10000)
 
     il = Icra2017Learning(flow_dm)
-    il.train()
 
     if len(sys.argv) > 1:
         load_iter = int(sys.argv[1])

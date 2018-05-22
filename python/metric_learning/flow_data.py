@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 
 class FlowDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning/', shuffle=True):
-        # only use first 10 for training
+    def __init__(self, path='/home/aushani/data/full_learning/', shuffle=True, evaluation=False):
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
             '%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
@@ -19,35 +18,41 @@ class FlowDataManager:
             '%s/2011_09_26_drive_0015_sync/matches.bin' % (path),
             '%s/2011_09_26_drive_0017_sync/matches.bin' % (path),
             '%s/2011_09_26_drive_0018_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0019_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0020_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0022_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0023_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0027_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0028_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0029_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0032_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0035_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0036_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0039_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0046_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0048_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0051_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0052_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0056_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0057_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0059_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0060_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0061_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0064_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0070_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0079_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0084_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0086_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0087_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0091_sync/matches.bin' % (path),
-            #'%s/2011_09_26_drive_0093_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0019_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0020_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0022_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0023_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0027_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0028_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0029_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0032_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0035_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0036_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0039_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0046_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0048_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0051_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0052_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0056_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0057_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0059_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0060_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0061_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0064_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0070_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0079_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0084_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0086_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0087_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0091_sync/matches.bin' % (path),
+            '%s/2011_09_26_drive_0093_sync/matches.bin' % (path),
             ]
+
+        # only use first 10 for training
+        if evaluation:
+            self.filenames = self.filenames[10:]
+        else:
+            self.filenames = self.filenames[:10]
 
         self.f_ptrs = {}
         self.file_ranges = {}
