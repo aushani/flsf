@@ -1,24 +1,21 @@
 import tensorflow as tf
-from data import *
+from flow_data import *
+from old_flow_sample import *
+from old_batch_manager import *
 import time
-import sample
-
-plt.switch_backend('agg')
+import matplotlib.pyplot as plt
+import sklearn.metrics
 
 class Icra2017Learning:
 
-    def __init__(self, data_manager):
+    def __init__(self, flow_data=None, exp_name='old_const'):
+        self.exp_name = exp_name
 
-        self.dm = data_manager
+        if flow_data:
+            self.validation_set = OldFlowSampleSet(flow_data.validation_set)
+            self.batches = OldBatchManager(flow_data)
 
-        self.width = self.dm.width
-        self.length = self.dm.length
-        self.height = self.dm.height
-        self.dim_data = self.width * self.length * self.height
-
-        self.n_classes = sample.n_classes
-
-        self.latent_dim = 25
+        self.height = 13
 
         # Inputs
         self.fv    = tf.placeholder(tf.float32, shape=[None, 3*self.height])
@@ -61,21 +58,20 @@ class Icra2017Learning:
         saver.restore(self.sess, filename)
         print 'Restored model from', filename
 
-    def train(self):
-        # Initialize variables
-        self.sess.run(tf.global_variables_initializer())
+    def train(self, start_iter = 0):
+        if start_iter == 0:
+            # Initialize variables
+            self.sess.run(tf.global_variables_initializer())
 
         # Set up writer
-        self.writer = tf.summary.FileWriter('./logs', self.sess.graph)
+        self.writer = tf.summary.FileWriter('./%s/logs' % (self.exp_name), self.sess.graph)
 
         # Save checkpoints
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
 
-        valid_set = self.dm.validation_set
-
         fd_valid = {
-                        self.fv : valid_set.feature_vector,
-                        self.match : valid_set.match,
+                        self.fv :      self.validation_set.feature_vector,
+                        self.match :   self.validation_set.match,
                    }
 
         iteration = 0
@@ -102,7 +98,7 @@ class Icra2017Learning:
 
             if iteration % it_save == 0:
                 tic = time.time()
-                save_path = saver.save(self.sess, "./model.ckpt", global_step = iteration)
+                save_path = saver.save(self.sess, "./%s/model.ckpt" % (self.exp_name), global_step = iteration)
                 toc = time.time()
 
                 #print '\tTook %5.3f sec to save checkpoint' % (toc - tic)
@@ -110,7 +106,8 @@ class Icra2017Learning:
             if iteration % it_plot == 0:
                 print 'Iteration %d' % (iteration)
 
-                self.make_match_plot(valid_set, save='metric_%010d.png' % iteration)
+                self.make_plots(save='%s/res_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_match_plot(valid_set, save='%s/metric_%010d.png' % iteration)
 
                 print '  Match accuracy = %5.3f %%' % (100.0 * self.accuracy.eval(session = self.sess, feed_dict = fd_valid))
 
@@ -121,15 +118,15 @@ class Icra2017Learning:
                 print ''
 
             tic = time.time()
-            samples = self.dm.get_next_samples(1)
+            samples = self.batches.get_next_batch()
             toc = time.time()
 
             t_data += (toc - tic)
 
             tic = time.time()
             fd = {
-                   self.fv: samples.feature_vector,
-                   self.match: samples.match,
+                   self.fv:     samples.feature_vector,
+                   self.match:  samples.match,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -138,17 +135,68 @@ class Icra2017Learning:
 
             iteration += 1
 
-    def make_match_plot(self, dataset, save=None, show=False):
-        scores = self.score.eval(session = self.sess, feed_dict = {self.fv: dataset.feature_vector})
-
+    def eval_scores(self, feature_vector):
+        fd = {self.fv: feature_vector}
+        scores = self.score.eval(session = self.sess, feed_dict = fd)
         scores = np.squeeze(scores)
 
-        plt.clf()
+        return scores
 
-        self.make_pr_curve(dataset.match, scores, 'ICRA 2017')
+    def make_plots(self, save=None):
+        # Get data
+
+        scores = self.eval_scores(self.validation_set.feature_vector)
+
+        is_background = self.validation_set.foreground == 0
+        is_foreground = self.validation_set.foreground == 1
+
+        match = self.validation_set.match
+
+        plt.clf()
+        fig = plt.gcf()
+        fig.set_size_inches(20, 20)
+
+        plt.subplot(3, 2, 1)
+        self.make_pr_curve(match[is_background], scores[is_background], 'Background')
+        self.make_pr_curve(match[is_foreground], scores[is_foreground], 'Foreground')
+        self.make_pr_curve(match, scores, 'All')
+
+        for i, cumul in enumerate([False, True]):
+            if i == 0:
+                plot_type = 'Histogram'
+            if i == 1:
+                plot_type = 'CDF'
+
+            plt.subplot(3, 2, 3 + 2*i)
+            plt.title('Occupancy Constancy %s' % plot_type)
+            idx_match = match == 1
+            idx_nonmatch = match == 0
+
+            plt.hist(scores[idx_match], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(scores[idx_nonmatch], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Score')
+
+            plt.subplot(3, 2, 4 + 2*i)
+            plt.title('Occupancy Constancy %s (Foreground only)' % plot_type)
+            idx_match = (match == 1) & (is_foreground)
+            idx_nonmatch = (match == 0) & (is_foreground)
+
+            plt.hist(scores[idx_match], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(scores[idx_nonmatch], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Distance')
 
         if save:
             plt.savefig(save)
+
+        plt.clf()
 
     def make_pr_curve(self, true_label, pred_label, label):
         precision, recall, thresholds = sklearn.metrics.precision_recall_curve(true_label, pred_label)
@@ -167,10 +215,19 @@ class Icra2017Learning:
         #plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(average_precision))
 
 if __name__ == '__main__':
-    dm = DataManager()
-    dm.make_validation(10000)
+    plt.switch_backend('agg')
 
-    validation = dm.validation_set
+    flow_dm = FlowDataManager()
+    flow_dm.make_validation(10000)
 
-    ml = Icra2017Learning(dm)
-    ml.train()
+    il = Icra2017Learning(flow_dm)
+    il.train()
+
+    if len(sys.argv) > 1:
+        load_iter = int(sys.argv[1])
+        print 'Loading from iteration %d' % (load_iter)
+
+        il.restore('model.ckpt-%d' % (load_iter))
+        il.train(start_iter = load_iter+1)
+    else:
+        il.train()
