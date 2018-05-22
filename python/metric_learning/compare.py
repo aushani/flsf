@@ -14,6 +14,8 @@ def make_pr_curve(true_label, pred_label, label):
     plt.xlim([0.0, 1.0])
     plt.grid(True)
 
+plt.switch_backend('agg')
+
 ml_match = np.loadtxt('ml_match.csv')
 ml_score = np.loadtxt('ml_score.csv')
 
@@ -27,5 +29,4 @@ make_pr_curve(ml_match, ml_score, 'Metric Learning')
 
 plt.title('Precision-Recall for Constancy Metrics')
 
-plt.show()
-
+plt.savefig('pr_curve.png')
