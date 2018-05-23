@@ -120,7 +120,7 @@ void Network::SetInput(const rt::OccGrid &og) {
   }
 }
 
-void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *filter_prob) {
+void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background) {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
   cl3_.Apply(res_cl2_, &res_cl3_);
@@ -128,7 +128,7 @@ void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *filt
 
   cl_filter_.Apply(*encoding, &res_filter_);
 
-  ComputeFilterProbability(filter_prob);
+  ComputeFilterProbability(p_background);
 }
 
 __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, float> prob) {
@@ -164,7 +164,7 @@ __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, fl
   prob(idx_i, idx_j) = p_filter;
 }
 
-void Network::ComputeFilterProbability(gu::GpuData<2, float> *filter_prob) {
+void Network::ComputeFilterProbability(gu::GpuData<2, float> *p_background) {
   dim3 threads;
   threads.x = 256;
   threads.y = 1;
@@ -175,7 +175,7 @@ void Network::ComputeFilterProbability(gu::GpuData<2, float> *filter_prob) {
   blocks.y = std::ceil(static_cast<float>(res_filter_.GetDim(1)) / threads.y);
   blocks.z = 1;
 
-  SoftmaxKernel<<<blocks, threads>>>(res_filter_, *filter_prob);
+  SoftmaxKernel<<<blocks, threads>>>(res_filter_, *p_background);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 }

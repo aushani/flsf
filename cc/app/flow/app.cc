@@ -150,6 +150,9 @@ void App::Refresh() {
   node_manager_.Update(flow_processor_, scans_[scan_at_-1], scans_[scan_at_], &tracklets_, scan_at_);
   printf("Done\n");
 
+  // Evaluation
+  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
+
   printf("\n\n");
 }
 
@@ -177,7 +180,7 @@ void App::HandleClick(const Command &command) {
     printf("NOT In camera view\n");
   }
 
-  const auto &fm = flow_processor_.GetFilterMap1();
+  const auto &fm = flow_processor_.GetBackgroundFilterMap1();
   const auto &fi = flow_processor_.GetFlowImage();
   const auto &dm = flow_processor_.GetDistanceMap();
 
@@ -193,7 +196,7 @@ void App::HandleClick(const Command &command) {
   // Get filter result
   float prob = fm.GetFilterProbabilityXY(x, y);
 
-  printf("Filter prob: %5.3f %%\n", prob * 100.0);
+  printf("p_background: %5.3f %%\n", prob * 100.0);
 
   kt::ObjectClass oc = kt::GetObjectTypeAtLocation(&tracklets_, pos1, scan_at_ - 1, fm.GetResolution());
   printf("Object is %s\n", kt::ObjectClassToString(oc).c_str());

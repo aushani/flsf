@@ -42,8 +42,8 @@ class FlowProcessor {
 
   FlowImage GetFlowImage() const;
   //const ClassificationMap& GetClassificationMap() const;
-  const FilterMap& GetFilterMap1() const;
-  const FilterMap& GetFilterMap2() const;
+  const FilterMap& GetBackgroundFilterMap1() const;
+  const FilterMap& GetBackgroundFilterMap2() const;
   const DistanceMap& GetDistanceMap() const;
 
  private:
@@ -52,7 +52,7 @@ class FlowProcessor {
   int iterations_ = 20;
 
   //void UpdateClassificationMap();
-  void UpdateFilterMap();
+  void UpdateBackgroundFilterMap();
   void UpdateDistanceMap();
 };
 

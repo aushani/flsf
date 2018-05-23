@@ -20,8 +20,10 @@ __global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData
   const int search_size_y = res.GetDim(3);
 
   // Get the (di, dj) we need to evaluate
-  const int d_i = tidx - (search_size_x/2);
-  const int d_j = tidy - (search_size_y/2);
+  const int off_x = search_size_x / 2;
+  const int off_y = search_size_y / 2;
+  const int d_i = tidx - off_x;
+  const int d_j = tidy - off_y;
 
   // Location in d1
   const int i1 = bidx;
@@ -32,19 +34,27 @@ __global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData
   const int j2 = j1 + d_j;
 
   // Find distance
-  float dist_sq = 0.0;
+  float dist = -1.0;
 
-  if (!d2.InRange(i2, j2, 0)) {
-    dist_sq = -1;
-  } else {
+  if (d2.InRange(i2, j2, 0)) {
+    float dist_sq = 0.0;
+
     for (int k=0; k<d1.GetDim(2); k++) {
       float dx = d1(i1, j1, k) - d2(i2, j2, k);
 
       dist_sq += dx*dx;
     }
+
+    dist = sqrt(dist_sq);
   }
 
-  res(i1, j1, tidx, tidy) = sqrt(dist_sq);
+  if (i1 == 166 && j1 == 36 && d_i == 5 && d_j == 0) {
+    printf("Here there! %d %d %d %d = %f\n",
+        i1, j1, tidx, tidy, dist);
+  }
+
+
+  res(i1, j1, tidx, tidy) = dist;
 }
 
 void MetricDistance::ComputeDistance(const gu::GpuData<3, float> &d1,

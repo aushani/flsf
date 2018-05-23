@@ -165,8 +165,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   printf("Tracklets took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  og1n_->Update(fp.GetLastOccGrid1(), fp.GetFilterMap1());
-  og2n_->Update(fp.GetLastOccGrid2(), fp.GetFilterMap2());;
+  og1n_->Update(fp.GetLastOccGrid1(), fp.GetBackgroundFilterMap1());
+  og2n_->Update(fp.GetLastOccGrid2(), fp.GetBackgroundFilterMap2());;
   printf("Occ Grids took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
@@ -178,8 +178,8 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   //printf("Classification Map took %5.3f ms to render\n", t.GetMs());
 
   t.Start();
-  fmn1_->Update(fp.GetFilterMap1());
-  fmn2_->Update(fp.GetFilterMap2());
+  fmn1_->Update(fp.GetBackgroundFilterMap1());
+  fmn2_->Update(fp.GetBackgroundFilterMap2());
   printf("Filter map took %5.3f ms to render\n", t.GetMs());
 
   viewer_->Unlock();
