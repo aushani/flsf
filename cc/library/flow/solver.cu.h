@@ -15,6 +15,7 @@ class Solver {
 
   FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq,
                         const gu::GpuData<2, float> &p_background,
+                        const gu::GpuData<2, int> &occ_mask,
                         float resolution,
                         int iters);
 

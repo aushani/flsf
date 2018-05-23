@@ -19,6 +19,7 @@ Solver::Solver(int nx, int ny, int n_window) :
 
 __global__ void Expectation(const gu::GpuData<4, float> dist,
                             const gu::GpuData<2, float> p_background,
+                            const gu::GpuData<2, int> occ_mask,
                             gu::GpuData<3, int> flow_est,
                             gu::GpuData<2, int> flow_valid,
                             gu::GpuData<2, float> energy,
@@ -43,7 +44,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     return;
   }
 
-  if (p_background(i_from, j_from) > 0.5) {
+  if (p_background(i_from, j_from) > 0.5 || occ_mask(i_from, j_from) == 0) {
     flow_est(i_from, j_from, 0) = 0;
     flow_est(i_from, j_from, 1) = 0;
 
@@ -241,73 +242,9 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
   }
 }
 
-__global__ void FlowKernel(const gu::GpuData<4, float> dist,
-                           const gu::GpuData<3, float> filter,
-                           gu::GpuData<3, int> flow_est,
-                           gu::GpuData<2, int> flow_valid) {
-  const int bidx = blockIdx.x;
-  const int bidy = blockIdx.y;
-
-  const int tidx = threadIdx.x;
-  const int tidy = threadIdx.y;
-
-  const int i0 = bidx * blockDim.x;
-  const int j0 = bidy * blockDim.y;
-
-  const int i = i0 + tidx;
-  const int j = j0 + tidy;
-
-  if (i >= dist.GetDim(0) || j >= dist.GetDim(1)) {
-    return;
-  }
-
-  // Find p_filter
-  float s1 = filter(i, j, 0);
-  float s2 = filter(i, j, 1);
-  float denom = exp(s1) + exp(s2);
-  float p_filter = exp(s1)/denom;
-
-  if (p_filter > 0.5) {
-    flow_est(i, j, 0) = 0;
-    flow_est(i, j, 1) = 0;
-
-    flow_valid(i, j) = 0;
-
-    return;
-  }
-
-  // Find best distance
-  int best_di = 0;
-  int best_dj = 0;
-  float best_d = 0;
-  bool first = true;
-
-  for (int di=0; di<dist.GetDim(2); di++) {
-    for (int dj=0; dj<dist.GetDim(3); dj++) {
-      float d = dist(i, j, di, dj);
-
-      if (d < 0) {
-        continue;
-      }
-
-      if (d < best_d || first) {
-        best_di = di;
-        best_dj = dj;
-        best_d = d;
-
-        first = false;
-      }
-    }
-  }
-
-  flow_est(i, j, 0) = best_di;
-  flow_est(i, j, 1) = best_dj;
-
-  flow_valid(i, j) = 1;
-}
-
 FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
                               const gu::GpuData<2, float> &p_background,
+                              const gu::GpuData<2, int> &occ_mask,
                               float resolution,
                               int iters) {
   library::timer::Timer timer;
@@ -317,6 +254,9 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
 
   BOOST_ASSERT(p_background.GetDim(0) == nx_);
   BOOST_ASSERT(p_background.GetDim(1) == ny_);
+
+  BOOST_ASSERT(occ_mask.GetDim(0) == nx_);
+  BOOST_ASSERT(occ_mask.GetDim(1) == ny_);
 
   // Setup thread and block dims
   dim3 threads;
@@ -335,12 +275,11 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
   energy_hat_valid_.Clear();
 
   timer.Start();
-  //FlowKernel<<<blocks, threads>>>(dist, filter, flow_est_, flow_valid_);
   library::timer::Timer t;
   for (int iter = 0; iter<iters; iter++) {
 
     t.Start();
-    Expectation<<<blocks, threads>>>(dist, p_background, flow_est_, flow_valid_,
+    Expectation<<<blocks, threads>>>(dist, p_background, occ_mask, flow_est_, flow_valid_,
         energy_, energy_hat_, energy_hat_valid_, n_window_, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);

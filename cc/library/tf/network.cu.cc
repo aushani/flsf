@@ -120,7 +120,8 @@ void Network::SetInput(const rt::OccGrid &og) {
   }
 }
 
-void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background) {
+void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background,
+    gu::GpuData<2, int> *occ_mask) {
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
   cl3_.Apply(res_cl2_, &res_cl3_);
@@ -129,6 +130,7 @@ void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_ba
   cl_filter_.Apply(*encoding, &res_filter_);
 
   ComputeFilterProbability(p_background);
+  ComputeOccMask(occ_mask);
 }
 
 __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, float> prob) {
@@ -166,8 +168,8 @@ __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, fl
 
 void Network::ComputeFilterProbability(gu::GpuData<2, float> *p_background) {
   dim3 threads;
-  threads.x = 256;
-  threads.y = 1;
+  threads.x = 32;
+  threads.y = 32;
   threads.z = 1;
 
   dim3 blocks;
@@ -176,6 +178,55 @@ void Network::ComputeFilterProbability(gu::GpuData<2, float> *p_background) {
   blocks.z = 1;
 
   SoftmaxKernel<<<blocks, threads>>>(res_filter_, *p_background);
+  cudaError_t err = cudaDeviceSynchronize();
+  BOOST_ASSERT(err == cudaSuccess);
+}
+
+__global__ void GetOccMask(const gu::GpuData<3, float> input, gu::GpuData<2, int> occ_mask) {
+  // Figure out which i, j this thread is processing
+  const int bidx = blockIdx.x;
+  const int bidy = blockIdx.y;
+
+  const int tidx = threadIdx.x;
+  const int tidy = threadIdx.y;
+
+  const int threads_x = blockDim.x;
+  const int threads_y = blockDim.y;
+
+  const int idx_i = tidx + bidx * threads_x;
+  const int idx_j = tidy + bidy * threads_y;
+
+  if (!occ_mask.InRange(idx_i, idx_j)) {
+    return;
+  }
+
+  int res = 0;
+
+  for (int k=0; k<input.GetDim(2); k++) {
+    if (input(idx_i, idx_j, k) > 0) {
+      res = 1;
+      break;
+    }
+  }
+
+  occ_mask(idx_i, idx_j) = res;
+}
+
+void Network::ComputeOccMask(gu::GpuData<2, int> *occ_mask) {
+  BOOST_ASSERT(occ_mask->GetDim(0) == input_.GetDim(0));
+  BOOST_ASSERT(occ_mask->GetDim(1) == input_.GetDim(1));
+
+  dim3 threads;
+  threads.x = 32;
+  threads.y = 32;
+  threads.z = 1;
+
+  dim3 blocks;
+  blocks.x = std::ceil(static_cast<float>(occ_mask->GetDim(0)) / threads.x);
+  blocks.y = std::ceil(static_cast<float>(occ_mask->GetDim(1)) / threads.y);
+  blocks.z = 1;
+
+  GetOccMask<<<blocks, threads>>>(input_, *occ_mask);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 }
