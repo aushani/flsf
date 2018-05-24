@@ -129,6 +129,7 @@ void App::Process() {
   printf("Done\n");
 
   // Evaluation
+  fi_eval_->Clear();
   fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
 
   printf("\n\n");
@@ -151,6 +152,7 @@ void App::Refresh() {
   printf("Done\n");
 
   // Evaluation
+  fi_eval_->Clear();
   fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
 
   printf("\n\n");
@@ -172,17 +174,22 @@ void App::HandleClick(const Command &command) {
   double y = command.GetClickY();
   Eigen::Vector2f pos1(x, y);
 
+  const auto &fm = flow_processor_.GetBackgroundFilterMap1();
+  const auto &fi = flow_processor_.GetFlowImage();
+  const auto &dm = flow_processor_.GetDistanceMap();
+  double res = fi.GetResolution();
+
+  int i = std::round(x / res);
+  int j = std::round(y / res);
+
   printf("Click at %f, %f\n", x, y);
+  printf("Click at %d, %d\n", i, j);
 
   if (camera_cal_.InCameraView(x, y, 0)) {
     printf("In camera view\n");
   } else {
     printf("NOT In camera view\n");
   }
-
-  const auto &fm = flow_processor_.GetBackgroundFilterMap1();
-  const auto &fi = flow_processor_.GetFlowImage();
-  const auto &dm = flow_processor_.GetDistanceMap();
 
   if (!fi.InRangeXY(x, y)) {
     printf("Out of range\n");
@@ -202,7 +209,6 @@ void App::HandleClick(const Command &command) {
   printf("Object is %s\n", kt::ObjectClassToString(oc).c_str());
 
   // Get flow result
-  double res = fi.GetResolution();
   printf("Flow is %f %f (%s)\n", fi.GetXFlowXY(x, y)*res, fi.GetYFlowXY(x, y)*res,
                                  fi.GetFlowValidXY(x, y) ? "valid":"not valid");
 

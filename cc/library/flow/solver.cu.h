@@ -20,7 +20,7 @@ class Solver {
                         int iters);
 
  private:
-  static constexpr float kSmoothing_ = 1.0;
+  static constexpr float kSmoothing_ = 0.005;
 
   const int           nx_;
   const int           ny_;

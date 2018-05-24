@@ -53,12 +53,6 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     return;
   }
 
-  // Now compute energies
-  int best_du = 0;
-  int best_dv = 0;
-  float best_energy = 0;
-  bool valid = false;
-
   // Smoothing terms
   int sum_u2 = 0;
   int sum_v2 = 0;
@@ -102,9 +96,19 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     }
   }
 
-  for (int du=0; du<dist.GetDim(2); du++) {
-    for (int dv=0; dv<dist.GetDim(3); dv++) {
-      float d = dist(i_from, j_from, du, dv);
+  // Now compute energies
+  int best_u = 0;
+  int best_v = 0;
+  float best_energy = 0;
+  bool valid = false;
+
+  for (int di=0; di<dist.GetDim(2); di++) {
+    const int u = di - n_window/2;
+
+    for (int dj=0; dj<dist.GetDim(3); dj++) {
+      const int v = dj - n_window/2;
+
+      float d = dist(i_from, j_from, di, dj);
 
       if (d < 0) {
         continue;
@@ -117,8 +121,8 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
         float smoothness_score = 0.0;
 
         smoothness_score += sum_u2 + sum_v2;
-        smoothness_score += count * (du*du + dv*dv);
-        smoothness_score += -2 * (du*sum_u + dv*sum_v);
+        smoothness_score += count * (u*u + v*v);
+        smoothness_score += -2 * (u*sum_u + v*sum_v);
 
         my_energy += w_p * smoothness_score;
       }
@@ -127,21 +131,20 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
       if (my_energy < best_energy || !valid) {
 
         // Is it better than the best score that's already here
-        int i_to = i_from + (du - n_window/2);
-        int j_to = j_from + (dv - n_window/2);
+        int i_to = i_from + u;
+        int j_to = j_from + v;
 
         int currently_pointing_here = flow_valid(i_from, j_from) &&
-                                      flow_est(i_from, j_from, 0) == du &&
-                                      flow_est(i_from, j_from, 1) == dv;
-
+                                      flow_est(i_from, j_from, 0) == u &&
+                                      flow_est(i_from, j_from, 1) == v;
 
         if (!energy_hat_valid(i_to, j_to) ||
             my_energy < energy_hat(i_to, j_to) ||
             currently_pointing_here) {
           valid = true;
 
-          best_du = du;
-          best_dv = dv;
+          best_u = u;
+          best_v = v;
           best_energy = my_energy;
         }
 
@@ -149,8 +152,8 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     }
   }
 
-  flow_est(i_from, j_from, 0) = best_du;
-  flow_est(i_from, j_from, 1) = best_dv;
+  flow_est(i_from, j_from, 0) = best_u;
+  flow_est(i_from, j_from, 1) = best_v;
 
   flow_valid(i_from, j_from) = valid;
 
@@ -187,9 +190,13 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
   bool valid = false;
 
   for (int di=0; di<n_window; di++) {
+    const int u = di - n_window/2;
+
     for (int dj=0; dj<n_window; dj++) {
-      int i_from = i_dest - (di - n_window/2);
-      int j_from = j_dest - (dj - n_window/2);
+      const int v = dj - n_window/2;
+
+      int i_from = i_dest - u;
+      int j_from = j_dest - v;
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -197,8 +204,8 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
       }
 
       if (flow_valid(i_from, j_from) &&
-          flow_est(i_from, j_from, 0) == di &&
-          flow_est(i_from, j_from, 1) == dj &&
+          flow_est(i_from, j_from, 0) == u &&
+          flow_est(i_from, j_from, 1) == v &&
           (energy(i_from, j_from) < best_energy || !valid)) {
         best_energy = energy(i_from, j_from);
         best_i_from = i_from;
@@ -219,9 +226,13 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
 
   // Invalidate other flows
   for (int di=0; di<n_window; di++) {
+    const int u = di - n_window/2;
+
     for (int dj=0; dj<n_window; dj++) {
-      int i_from = i_dest - (di - n_window/2);
-      int j_from = j_dest - (dj - n_window/2);
+      const int v = dj - n_window/2;
+
+      int i_from = i_dest - u;
+      int j_from = j_dest - v;
 
       // Check in range
       if (!flow_valid.InRange(i_from, j_from)) {
@@ -234,8 +245,8 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
       }
 
       // Invalidate it if it leads here
-      if (flow_est(i_from, j_from, 0) == di &&
-          flow_est(i_from, j_from, 1) == dj) {
+      if (flow_est(i_from, j_from, 0) == u &&
+          flow_est(i_from, j_from, 1) == v) {
         flow_valid(i_from, j_from) = 0;
       }
     }
@@ -302,12 +313,12 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
   FlowImage fi(nx_, ny_, resolution);
 
   for (int i=0; i<h_res.GetDim(0); i++) {
+    const int ii = fi.MinX() + i;
     for (int j=0; j<h_res.GetDim(1); j++) {
-      int ii = fi.MinX() + i;
-      int jj = fi.MinY() + j;
+      const int jj = fi.MinY() + j;
 
-      int flow_x = h_res(i, j, 0) - dist.GetDim(2)/2;
-      int flow_y = h_res(i, j, 1) - dist.GetDim(3)/2;
+      int flow_x = h_res(i, j, 0);
+      int flow_y = h_res(i, j, 1);
 
       fi.SetFlow(ii, jj, flow_x, flow_y);
       fi.SetFlowValid(ii, jj, h_valid(i, j) == 1);

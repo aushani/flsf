@@ -48,12 +48,6 @@ __global__ void DistanceKernel(const gu::GpuData<3, float> d1, const gu::GpuData
     dist = sqrt(dist_sq);
   }
 
-  if (i1 == 166 && j1 == 36 && d_i == 5 && d_j == 0) {
-    printf("Here there! %d %d %d %d = %f\n",
-        i1, j1, tidx, tidy, dist);
-  }
-
-
   res(i1, j1, tidx, tidy) = dist;
 }
 
