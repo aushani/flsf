@@ -130,7 +130,7 @@ void App::Process() {
 
   // Evaluation
   fi_eval_->Clear();
-  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
+  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), flow_processor_.GetBackgroundFilterMap1(), scan_at_ - 1, scan_at_);
 
   printf("\n\n");
 }
@@ -153,7 +153,7 @@ void App::Refresh() {
 
   // Evaluation
   fi_eval_->Clear();
-  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), scan_at_ - 1, scan_at_);
+  fi_eval_->Evaluate(flow_processor_.GetFlowImage(), flow_processor_.GetBackgroundFilterMap1(), scan_at_ - 1, scan_at_);
 
   printf("\n\n");
 }

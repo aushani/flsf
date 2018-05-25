@@ -16,7 +16,7 @@ FlowImageEvaluator::FlowImageEvaluator(const kt::Tracklets &tracklets, const kt:
  poses_(poses) {
 }
 
-void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int to) {
+void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, const fl::FilterMap &fm, int from, int to) {
   const kt::Pose pose1 = poses_[from];
   const kt::Pose pose2 = poses_[to];
 
@@ -40,15 +40,16 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int
         continue;
       }
 
-      // Get object class
-      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, from, res);
-
-      if (c != kt::ObjectClass::CAR) {
+      // Only non background
+      if (fm.GetFilterProbability(i, j) > 0.5) {
         continue;
       }
 
+      // Get object class
+      kt::ObjectClass object_class = kt::GetObjectTypeAtLocation(&tracklets_, pos1, from, res);
+
       // Find true flow
-      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, from, to, pose1, pose2);
+      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, from, to, pose1, pose2, res);
 
       Eigen::Vector2f true_flow = pos2 - pos1;
 
@@ -59,33 +60,35 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, int from, int
       Eigen::Vector2f err = true_flow - pred_flow;
 
       //printf("%d %d\n", i, j);
-      //printf("true is %f %f\n", true_flow.x(), true_flow.y());
-      //printf("pred is %f %f\n", pred_flow.x(), pred_flow.y());
-      //printf("error is %f %f\n", err.x(), err.y());
+      //printf("true is        % 7.5f % 7.5f\n", true_flow.x(), true_flow.y());
+      //printf("pred is        % 7.5f % 7.5f\n", pred_flow.x(), pred_flow.y());
+      //printf("error is       % 7.5f % 7.5f\n", err.x(), err.y());
+      //printf("norm error is  % 7.5f\n", err.norm());
       //printf("\n");
 
-      total_err_ += err.norm();
-      count_++;
-
-      errors_.push_back(err.norm());
+      errors_[object_class].Process(err.norm());
     }
   }
 
-  printf("Mean norm error: %5.3f (%d samples)\n", total_err_ / count_, count_);
+  for (const auto &kv : errors_) {
+    const auto &oc = kv.first;
+    const auto &es = kv.second;
+
+    printf("Mean norm error for %s: %5.3f (%d samples)\n",
+           kt::ObjectClassToString(oc).c_str(), es.GetMean(), es.GetNumSamples());
+  }
 }
 
 void FlowImageEvaluator::Clear() {
-  total_err_ = 0.0;
-  count_ = 0;
-
   errors_.clear();
 }
 
-void FlowImageEvaluator::WriteErrors(const fs::path &path) {
-  std::ofstream file(path.string());
+void FlowImageEvaluator::WriteErrors(const fs::path &path) const {
+  for (const auto &kv : errors_) {
+    const auto &oc = kv.first;
+    const auto &es = kv.second;
 
-  for (const float err : errors_) {
-    file << err << std::endl;
+    es.WriteErrors(path / (kt::ObjectClassToString(oc) + ".csv"));
   }
 }
 

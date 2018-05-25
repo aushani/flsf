@@ -71,7 +71,7 @@ void App::Run(const fs::path &save_path) {
     printf("Took %5.3f ms to compute flow\n", timer.GetMs());
 
     // Evaluation
-    eval.Evaluate(flow_processor_.GetFlowImage(), scan_at - 1, scan_at);
+    eval.Evaluate(flow_processor_.GetFlowImage(), flow_processor_.GetBackgroundFilterMap1(), scan_at - 1, scan_at);
 
     printf("\n\n");
   }
