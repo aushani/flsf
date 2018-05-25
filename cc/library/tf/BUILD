@@ -14,6 +14,7 @@ cc_library(
             "//tools:cuda",
             "@boost//:boost_headers",
             "@boost//:boost_filesystem",
+            "@cudnn//:cudnn",
            ],
 )
 

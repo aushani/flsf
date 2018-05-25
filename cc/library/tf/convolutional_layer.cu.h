@@ -2,6 +2,8 @@
 
 #include "library/gpu_util/gpu_data.cu.h"
 
+#include <cudnn.h>
+
 namespace gu = library::gpu_util;
 
 namespace library {
