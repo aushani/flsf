@@ -285,7 +285,7 @@ class MetricLearning:
                      self.keep_prob:   1.0,
                    }
 
-        iteration = start_iter
+        iteration = start_iter + 1
 
         it_save = 1000
         it_plot = 1000
