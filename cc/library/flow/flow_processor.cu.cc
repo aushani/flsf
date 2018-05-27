@@ -36,11 +36,11 @@ struct DeviceData {
    filter_map1(167, 167, res),                            // XXX magic numbers
    filter_map2(167, 167, res),                            // XXX magic numbers
    distance_map(167, 167, 31, res) {                      // XXX magic numbers
-    last_encoding1.SetCoalesceDim(0);
-    last_encoding2.SetCoalesceDim(0);
+    //last_encoding1.SetCoalesceDim(0);
+    //last_encoding2.SetCoalesceDim(0);
 
-    p_background1.SetCoalesceDim(0);
-    p_background2.SetCoalesceDim(0);
+    //p_background1.SetCoalesceDim(0);
+    //p_background2.SetCoalesceDim(0);
   };
 
   float resolution;

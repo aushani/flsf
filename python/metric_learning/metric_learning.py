@@ -57,9 +57,11 @@ class MetricLearning:
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
         # Encoder
+        self.l1 = 1
         self.encoding = self.get_encoding(self.full_occ)
 
         # Filter
+        self.l1 = None
         self.make_filter(self.full_occ)
 
         # Metric distance
@@ -101,6 +103,9 @@ class MetricLearning:
             l1 = tf.contrib.layers.conv2d(occ_do, num_outputs = 200, kernel_size = 9,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
+
+            if self.l1 is None:
+                self.l1 = l1
 
             l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 3,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l2')
@@ -254,6 +259,16 @@ class MetricLearning:
         fd = {self.full_occ: occ, self.keep_prob: 1.0}
 
         probs = self.filter_probs.eval(session = self.sess, feed_dict = fd)
+
+        return probs
+
+    def eval_debug(self, occ):
+        if len(occ.shape) == 3:
+            occ = np.expand_dims(occ, 0)
+
+        fd = {self.full_occ: occ, self.keep_prob: 1.0}
+
+        probs = self.l1.eval(session = self.sess, feed_dict = fd)
 
         return probs
 

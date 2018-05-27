@@ -24,6 +24,12 @@ while True:
     toc = time.time()
     t_ms = (toc - tic) * 1e3
 
+    debug = ml.eval_debug(sample.occ)
+
+    res = debug[0, 42, 42, :]
+    for i in range(len(res)):
+        print i, res[i]
+
     print 'Took %5.3f ms to eval prob' % (t_ms)
 
     probs = probs[0, :, :, :]

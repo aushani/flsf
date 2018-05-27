@@ -4,100 +4,160 @@
 
 #include "library/timer/timer.h"
 
+#include "library/tf/util.cu.h"
+
 namespace library {
 namespace tf {
 
-ConvolutionalLayer::ConvolutionalLayer(const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
+ConvolutionalLayer::ConvolutionalLayer(int height, int width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
+ height_(height),
+ width_(width),
+ input_channels_(weights.GetDim(2)),
+ output_channels_(weights.GetDim(3)),
+ kernel_height_(weights.GetDim(0)),
+ kernel_width_(weights.GetDim(1)),
  weights_(weights),
- biases_(biases) {
+ biases_(biases),
+ z_(std::make_shared<gu::GpuData<4, float> >(1, height_, width_, output_channels_)) {
   BOOST_ASSERT(weights_.GetDim(3) == biases_.GetDim(0));
-  BOOST_ASSERT(weights_.GetDim(3) <= kMaxOutputs);
-}
 
-__global__ void ApplyKernel(const gu::GpuData<4, float> weights, const gu::GpuData<1, float> biases,
-                            const gu::GpuData<3, float> input, gu::GpuData<3,
-                            float> output, bool relu, bool leaky_relu) {
-  // Figure out which hit this thread is processing
-  const int bidx = blockIdx.x;
-  const int bidy = blockIdx.y;
+  cudnnHandle_t cudnn = GetCudnnHandle();
+  cudnnStatus_t status;
 
-  const int tidx = threadIdx.x;
-  const int tidy = threadIdx.y;
+  // Input
+  status = cudnnCreateTensorDescriptor(&input_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
-  const int threads_x = blockDim.x;
-  const int threads_y = blockDim.y;
+  status = cudnnSetTensor4dDescriptor(input_descriptor_,
+                                      CUDNN_TENSOR_NHWC,    // format
+                                      CUDNN_DATA_FLOAT,     // data type
+                                      1,                    // batch size
+                                      input_channels_,      // channels,
+                                      height_,              // image height
+                                      width_);              // image width
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
-  const int idx_i = tidx + bidx * threads_x;
-  const int idx_j = tidy + bidy * threads_y;
+  status = cudnnCreateTensorDescriptor(&output_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
-  if (idx_i < 0 || idx_i >= input.GetDim(0)) {
-    return;
-  }
+  // Output
+  status = cudnnSetTensor4dDescriptor(output_descriptor_,
+                                      CUDNN_TENSOR_NHWC,    // format
+                                      CUDNN_DATA_FLOAT,     // data type
+                                      1,                    // batch size
+                                      output_channels_,     // channels,
+                                      height_,              // image height
+                                      width_);              // image width
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
-  if (idx_j < 0 || idx_j >= input.GetDim(1)) {
-    return;
-  }
+  status = cudnnCreateTensorDescriptor(&z_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
-  float res[ConvolutionalLayer::kMaxOutputs];
+  // z ????
+  status = cudnnSetTensor4dDescriptor(z_descriptor_,
+                                      CUDNN_TENSOR_NHWC,    // format
+                                      CUDNN_DATA_FLOAT,     // data type
+                                      1,                    // batch size
+                                      output_channels_,     // channels,
+                                      height_,              // image height
+                                      width_);              // image width
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+  z_->Clear();
+
+  // Activation
+  status = cudnnCreateActivationDescriptor(&activation_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  status = cudnnSetActivationDescriptor(activation_descriptor_,
+                                        CUDNN_ACTIVATION_IDENTITY,
+                                        CUDNN_NOT_PROPAGATE_NAN,
+                                        0.0);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
   // Bias
-  for (int k=0; k<biases.GetDim(0); k++) {
-    //output(idx_i, idx_j, k) = biases(k);
-    res[k] = biases(k);
+  status = cudnnCreateTensorDescriptor(&biases_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  status = cudnnSetTensor4dDescriptor(biases_descriptor_,
+                                      CUDNN_TENSOR_NHWC,    // format
+                                      CUDNN_DATA_FLOAT,     // data type
+                                      1,                    // batch size
+                                      output_channels_,     // channels
+                                      1,                    // bias height
+                                      1);                   // bias width
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  // Kernel
+  status = cudnnCreateFilterDescriptor(&kernel_descriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  status = cudnnSetFilter4dDescriptor(kernel_descriptor_,
+                                      CUDNN_DATA_FLOAT,     // data type
+                                      CUDNN_TENSOR_NHWC,    // format
+                                      output_channels_,     // out channels
+                                      input_channels_,      // in channels
+                                      kernel_height_,       // kernel height
+                                      kernel_width_);       // kernel width
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  status = cudnnCreateConvolutionDescriptor(&convolution_desriptor_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  // Convolution
+  status = cudnnSetConvolution2dDescriptor(convolution_desriptor_,
+                                           kernel_height_/2,           // pad height
+                                           kernel_width_/2,            // pad weight
+                                           1,                          // vertical stride
+                                           1,                          // horizontal stride
+                                           1,                          // dialation height
+                                           1,                          // dialation width
+                                           CUDNN_CROSS_CORRELATION,    // mode
+                                           CUDNN_DATA_FLOAT);          // compute type
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  // Convolution algorithm
+  status = cudnnGetConvolutionForwardAlgorithm(cudnn,
+                                               input_descriptor_,
+                                               kernel_descriptor_,
+                                               convolution_desriptor_,
+                                               output_descriptor_,
+                                               CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                                               0,                                       // memory limit in bytes
+                                               &convolution_algorithm_);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  size_t workspace_bytes = 0;
+  status = cudnnGetConvolutionForwardWorkspaceSize(cudnn,
+                                                   input_descriptor_,
+                                                   kernel_descriptor_,
+                                                   convolution_desriptor_,
+                                                   output_descriptor_,
+                                                   convolution_algorithm_,
+                                                   &workspace_bytes);
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+  if (workspace_bytes <= 0) {
+    workspace_bytes = 1;
   }
 
-  // Weights
-  for (int i=0; i<weights.GetDim(0); i++) {
-    int ii = i + idx_i - weights.GetDim(0)/2;
-    if (ii < 0 || ii >= input.GetDim(0)) {
-      continue;
-    }
+  d_workspace_ = std::make_shared<gu::GpuData<1, uint8_t> >(static_cast<int>(workspace_bytes));
+}
 
-    for (int j=0; j<weights.GetDim(1); j++) {
-      int jj = j + idx_j - weights.GetDim(1)/2;
-      if (jj < 0 || jj >= input.GetDim(1)) {
-        continue;
-      }
+__global__ void LeakyRelu(float *d_data, int sz) {
+  // Figure out which number we're operating on
+  const int bidx = blockIdx.x;
+  const int tidx = threadIdx.x;
 
-      for (int k=0; k<weights.GetDim(2); k++) {
-        float val = input(ii, jj, k);
+  const int threads = blockDim.x;
 
-        for (int layer=0; layer<weights.GetDim(3); layer++) {
-          float w = weights(i, j, k, layer);
+  const int idx = tidx + bidx*threads;
 
-          res[layer] += val * w;
-          //output(idx_i, idx_j, k) += val * w;
-        }
-      }
-    }
+  if (idx >= sz) {
+    return;
   }
 
-  // RELU Activation
-  if (relu) {
-    for (int k=0; k<output.GetDim(2); k++) {
-      //if (output(idx_i, idx_j, k) < 0) {
-      //  output(idx_i, idx_j, k) = 0.0;
-      //}
-      if (res[k] < 0) {
-        res[k] = 0.0;
-      }
-    }
-  }
-
-  if (leaky_relu) {
-    for (int k=0; k<output.GetDim(2); k++) {
-      //if (output(idx_i, idx_j, k) < 0) {
-      //  output(idx_i, idx_j, k) = 0.0;
-      //}
-      if (res[k] < 0) {
-        res[k] *= 0.2;
-      }
-    }
-  }
-
-  // Write result
-  for (int k=0; k<output.GetDim(2); k++) {
-    output(idx_i, idx_j, k) = res[k];
+  if (d_data[idx] < 0) {
+    d_data[idx] *= 0.2;
   }
 }
 
@@ -111,25 +171,87 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   BOOST_ASSERT(input.GetDim(2) == weights_.GetDim(2));
   BOOST_ASSERT(output->GetDim(2) == weights_.GetDim(3));
 
-  dim3 threads;
-  threads.x = 32;
-  threads.y = 1;
-  threads.z = 1;
+  BOOST_ASSERT(input.GetDim(0) == height_);
+  BOOST_ASSERT(input.GetDim(1) == width_);
 
-  dim3 blocks;
-  blocks.x = std::ceil(static_cast<float>(input.GetDim(0))/threads.x);
-  blocks.y = std::ceil(static_cast<float>(input.GetDim(1))/threads.y);
-  blocks.z = 1;
+  const float alpha = 1.0;
+  const float beta = 0.0;
+  const float alpha2 = 0.0;
 
-  printf("\tRunning kernel with %dx%d threads and %dx%d blocks\n",
-        threads.x, threads.y, blocks.x, blocks.y);
+  cudnnHandle_t cudnn = GetCudnnHandle();
+  cudnnStatus_t status;
 
   t.Start();
-  ApplyKernel<<<blocks, threads>>>(weights_, biases_, input, *output,
-                                   false, true); // Leaky RELU
+  status = cudnnConvolutionForward(cudnn,
+                                   &alpha,
+                                   input_descriptor_,
+                                   input.GetRawPointer(),
+                                   kernel_descriptor_,
+                                   weights_.GetRawPointer(),
+                                   convolution_desriptor_,
+                                   convolution_algorithm_,
+                                   d_workspace_->GetRawPointer(),
+                                   d_workspace_->Size(),
+                                   &beta,
+                                   output_descriptor_,
+                                   output->GetRawPointer());
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+  printf("Convolution took %5.3f ms\n", t.GetMs());
+
+  const float beta2 = 1.0;
+
+  t.Start();
+  status = cudnnAddTensor(cudnn,
+                          &alpha,
+                          biases_descriptor_,
+                          biases_.GetRawPointer(),
+                          &beta2,
+                          output_descriptor_,
+                          output->GetRawPointer());
+  BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+  printf("biases took %5.3f ms\n", t.GetMs());
+
+  //t.Start();
+  //status = cudnnConvolutionBiasActivationForward(cudnn,
+  //                                               &alpha,
+  //                                               input_descriptor_,
+  //                                               input.GetRawPointer(),
+  //                                               kernel_descriptor_,
+  //                                               weights_.GetRawPointer(),
+  //                                               convolution_desriptor_,
+  //                                               convolution_algorithm_,
+  //                                               d_workspace_->GetRawPointer(),
+  //                                               d_workspace_->Size(),
+  //                                               &alpha2,
+  //                                               z_descriptor_,
+  //                                               z_->GetRawPointer(),
+  //                                               biases_descriptor_,
+  //                                               biases_.GetRawPointer(),
+  //                                               activation_descriptor_,
+  //                                               output_descriptor_,
+  //                                               output->GetRawPointer());
+  //BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+  //printf("\tConvolution took %5.3f ms\n", t.GetMs());
+
+  int threads = 32;
+  int blocks = std::ceil(static_cast<float>(output->Size())/threads);
+  //printf("\tRunning kernel with %d threads and %d blocks\n", threads, blocks);
+
+  t.Start();
+  LeakyRelu<<<blocks, threads>>>(output->GetRawPointer(), output->Size());
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
-  printf("\tKernel took %5.3f ms\n", t.GetMs());
+  printf("\tLeaky RELU kernel took %5.3f ms\n", t.GetMs());
+
+  if (output->GetDim(2) == 200) {
+    gu::HostData<3, float> h_output(*output);
+    gu::HostData<1, float> h_bias(biases_);
+    printf("\n\n");
+    for (int i=0; i<h_output.GetDim(2); i++) {
+      printf("Channel % 3d: %7.5f\n", i, h_output(42, 42, i));
+    }
+    printf("\n\n");
+  }
 }
 
 int ConvolutionalLayer::GetOutputLayers() const {

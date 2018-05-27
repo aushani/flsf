@@ -2,6 +2,16 @@ from tensorflow.python.tools import inspect_checkpoint as chkp
 import sys
 import tensorflow as tf
 import numpy as np
+from sympy.utilities.iterables import multiset_permutations
+
+a = [0, 1, 2, 3]
+
+ax = []
+
+for p in multiset_permutations(a):
+    ax.append(p)
+
+print ax
 
 if len(sys.argv) < 2:
     print 'Please specify tensorflow model file'
@@ -10,6 +20,13 @@ if len(sys.argv) < 2:
 if len(sys.argv) < 3:
     print 'Please specify output directory'
     sys.exit(1)
+
+if len(sys.argv) < 4:
+    print 'Please specify axis ordering'
+    sys.exit(1)
+
+test_number = int(sys.argv[3])
+print ax[test_number]
 
 model_file = sys.argv[1]
 out_dir = sys.argv[2]
@@ -54,11 +71,14 @@ for var_name in var_names:
     var = graph.get_tensor_by_name(var_name + ":0")
     print var.shape
     var_val = var.eval(session=sess)
+
+    if 'weights' in var_name:
+        #var_val = np.moveaxis(var_val, [0, 1, 2, 3], [3, 2, 0, 1])
+        var_val = np.moveaxis(var_val, [0, 1, 2, 3], ax[test_number])
+        print var_val.shape
+
     var_val = var_val.flatten()
     print var_val.shape
-
-    #if var_name is "Encoder/l1/weights":
-    #    print var_val[0, 0]
 
     fn = out_dir + '/' + var_name.replace('/', '_') + '.dat'
     np.savetxt(fn, var_val, delimiter=' ')
