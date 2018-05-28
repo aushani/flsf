@@ -15,6 +15,9 @@ cudnnHandle_t GetCudnnHandle() {
     // Initalize cudnn
     cudnnStatus_t status = cudnnCreate(&cudnn_handle);
     BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
+
+    printf("Initialized cudnn\n");
+    handle_initialized = true;
   }
 
   return cudnn_handle;

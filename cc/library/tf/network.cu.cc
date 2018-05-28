@@ -3,6 +3,7 @@
 #include <boost/assert.hpp>
 
 #include "library/params/params.h"
+#include "library/timer/timer.h"
 
 namespace ps = library::params;
 
@@ -117,15 +118,21 @@ void Network::SetInput(const rt::OccGrid &og) {
 
 void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background,
     gu::GpuData<2, int> *occ_mask) {
+  library::timer::Timer t;
+
+  t.Start();
   cl1_.Apply(input_, &res_cl1_);
   cl2_.Apply(res_cl1_, &res_cl2_);
   cl3_.Apply(res_cl2_, &res_cl3_);
   clatent_.Apply(res_cl3_, encoding);
 
   cl_filter_.Apply(*encoding, &res_filter_);
+  printf("  Took %5.3f ms to run through network\n", t.GetMs());
 
+  t.Start();
   ComputeFilterProbability(p_background);
   ComputeOccMask(occ_mask);
+  printf("  Took %5.3f ms to compute data\n", t.GetMs());
 }
 
 __global__ void SoftmaxKernel(const gu::GpuData<3, float> res, gu::GpuData<2, float> prob) {
