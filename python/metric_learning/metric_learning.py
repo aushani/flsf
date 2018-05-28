@@ -15,8 +15,8 @@ class MetricLearning:
         self.full_length = 167
         self.full_height = 13
 
-        self.patch_width  = 15
-        self.patch_length = 15
+        self.patch_width  = 27
+        self.patch_length = 27
         self.patch_height = 13
 
         if filter_data:
@@ -27,9 +27,9 @@ class MetricLearning:
             self.flow_validation_set = flow_data.validation_set
             self.flow_batches = BatchManager(flow_data)
 
-        self.latent_dim = 25
+        self.latent_dim = 10
 
-        self.default_keep_prob = 0.5
+        self.default_keep_prob = 0.8
 
         # Filter weighting
         num_neg = 12119773.0
@@ -102,15 +102,19 @@ class MetricLearning:
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l1')
             l1_do = tf.nn.dropout(l1, self.keep_prob)
 
-            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 3,
+            l2 = tf.contrib.layers.conv2d(l1_do, num_outputs = 100, kernel_size = 7,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l2')
             l2_do = tf.nn.dropout(l2, self.keep_prob)
 
-            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 50, kernel_size = 3,
+            l3 = tf.contrib.layers.conv2d(l2_do, num_outputs = 50, kernel_size = 5,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='l3')
             l3_do = tf.nn.dropout(l3, self.keep_prob)
 
-            latent = tf.contrib.layers.conv2d(l3_do, num_outputs = self.latent_dim, kernel_size = 1,
+            l4 = tf.contrib.layers.conv2d(l3_do, num_outputs = 25, kernel_size = 3,
+                    activation_fn = tf.nn.leaky_relu, padding = padding, scope='l4')
+            l4_do = tf.nn.dropout(l4, self.keep_prob)
+
+            latent = tf.contrib.layers.conv2d(l4_do, num_outputs = self.latent_dim, kernel_size = 3,
                     activation_fn = tf.nn.leaky_relu, padding = padding, scope='latent')
             latent_do = tf.nn.dropout(latent, self.keep_prob)
 
@@ -176,26 +180,33 @@ class MetricLearning:
 
         pred_patch_filter, pred_patch_filter_prob = self.get_filter(patch1, padding = 'VALID')
 
-        assert latent1.shape[1] == 3
-        assert latent1.shape[2] == 3
+        #print latent1.shape
+        #print pred_patch_filter.shape
+        #print pred_patch_filter_prob.shape
 
-        assert latent2.shape[1] == 3
-        assert latent2.shape[2] == 3
+        assert latent1.shape[1] == 5
+        assert latent1.shape[2] == 5
 
-        assert pred_patch_filter.shape[1] == 1
-        assert pred_patch_filter.shape[2] == 1
+        assert latent2.shape[1] == 5
+        assert latent2.shape[2] == 5
 
-        assert pred_patch_filter_prob.shape[1] == 1
-        assert pred_patch_filter_prob.shape[2] == 1
+        assert pred_patch_filter.shape[1] == 3
+        assert pred_patch_filter.shape[2] == 3
+
+        assert pred_patch_filter_prob.shape[1] == 3
+        assert pred_patch_filter_prob.shape[2] == 3
 
         # Take center encoding
-        latent1 = latent1[:, 1, 1, :]
-        latent2 = latent2[:, 1, 1, :]
+        latent1 = latent1[:, 2, 2, :]
+        latent2 = latent2[:, 2, 2, :]
         #latent1 = tf.squeeze(latent1, axis=[1, 2])
         #latent2 = tf.squeeze(latent2, axis=[1, 2])
 
-        pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
-        pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
+        pred_patch_filter = pred_patch_filter[:, 1, 1, :]
+        pred_patch_filter_prob = pred_patch_filter_prob[:, 1, 1, :]
+        #pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
+        #pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
+
         prob_bg = pred_patch_filter_prob[:, 0]
         prob_fg = pred_patch_filter_prob[:, 1]
 
@@ -211,29 +222,17 @@ class MetricLearning:
         metric_dist = tf.sqrt(metric_dist2)
 
         # Loss based on distance
-        max_dist2 = 10
-        non_match_loss = tf.clip_by_value(max_dist2 - metric_dist2, clip_value_min=0, clip_value_max=max_dist2)
-        match_loss = metric_dist2
+        max_dist = 10
+        non_match_loss = tf.clip_by_value(max_dist - metric_dist, clip_value_min=0, clip_value_max=max_dist)
+        match_loss = metric_dist
 
         # Select which loss according to match flag
         is_match = match > 0
         metric_dist_loss = tf.where(is_match, match_loss, non_match_loss, 'loss_switch')
 
-        # Weight according to filter prob (if it should be background)
-        is_background = true_patch_filter == 0
-        is_foreground = true_patch_filter == 1
-        #weighted_loss = tf.where(is_background, tf.multiply(prob_fg, match_loss), match_loss)
-        weighted_loss = tf.where(is_background, 0.1*metric_dist_loss, metric_dist_loss)
+        loss = tf.reduce_mean(metric_dist_loss)
 
-        # Penalize incorrect filter
-        filter_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_patch_filter,
-                                                                     logits=pred_patch_filter)
-
-        net_loss = filter_loss + weighted_loss
-
-        net_loss = tf.reduce_mean(net_loss)
-
-        return net_loss, metric_dist, prob_fg
+        return loss, metric_dist, prob_fg
 
     def eval_dist(self, patch1, patch2):
         fd = {self.patch1: patch1, self.patch2: patch2, self.keep_prob: 1.0}

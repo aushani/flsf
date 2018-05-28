@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class FlowDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning/', shuffle=True, evaluation=False):
+    def __init__(self, path='/home/aushani/data/full_learning_v2/', shuffle=True, evaluation=False):
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
             '%s/2011_09_26_drive_0002_sync/matches.bin' % (path),
@@ -57,8 +57,8 @@ class FlowDataManager:
         self.f_ptrs = {}
         self.file_ranges = {}
 
-        self.width = 15
-        self.length = 15
+        self.width = 27
+        self.length = 27
         self.height = 13
 
         self.size_occ = self.width * self.length * self.height
@@ -147,6 +147,10 @@ class FlowDataManager:
 
 if __name__ == '__main__':
     d = FlowDataManager()
+
+    print 'Press enter to continue'
+    raw_input()
+
     d.make_validation(1000)
 
     valid_set = d.validation_set
