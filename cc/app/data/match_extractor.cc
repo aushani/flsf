@@ -20,13 +20,15 @@ MatchExtractor::MatchExtractor(const fs::path &base_path, const fs::path &save_p
 void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
   // Get bounds (twice as big for buffer room when dealing with network training)
   int i0 = i - ps::kPatchSize;
-  int i1 = i0 + ps::kPatchSize;
+  int i1 = i0 + 2 * ps::kPatchSize;
 
   int j0 = j - ps::kPatchSize;
-  int j1 = j0 + ps::kPatchSize;
+  int j1 = j0 + 2 * ps::kPatchSize;
 
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;
+
+  std::vector<float> vals;
 
   for (int ii = i0; ii <= i1; ii++) {
     for (int jj = j0; jj <= j1; jj++) {
@@ -34,10 +36,12 @@ void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
         rt::Location loc(ii, jj, kk);
 
         float p = og.GetProbability(loc);
-        save_file_.write(reinterpret_cast<const char*>(&p), sizeof(float));
+        vals.push_back(p);
       }
     }
   }
+
+  save_file_.write(reinterpret_cast<const char*>(vals.data()), vals.size()*sizeof(float));
 }
 
 void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &og2, int idx1, int idx2) {

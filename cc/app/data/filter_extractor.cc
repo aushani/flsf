@@ -26,16 +26,20 @@ void FilterExtractor::WriteOccGrid(const rt::OccGrid &og) {
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;
 
+  std::vector<float> vals;
+
   for (int ii = i0; ii <= i1; ii++) {
     for (int jj = j0; jj <= j1; jj++) {
       for (int kk = k0; kk <= k1; kk++) {
         rt::Location loc(ii, jj, kk);
 
         float p = og.GetProbability(loc);
-        save_file_.write(reinterpret_cast<const char*>(&p), sizeof(float));
+        vals.push_back(p);
       }
     }
   }
+
+  save_file_.write(reinterpret_cast<const char*>(vals.data()), vals.size()*sizeof(float));
 }
 
 void FilterExtractor::WriteFilter(int frame) {
@@ -45,6 +49,8 @@ void FilterExtractor::WriteFilter(int frame) {
 
   int j0 = ps::kOccGridMinXY;
   int j1 = ps::kOccGridMaxXY;
+
+  std::vector<int> vals;
 
   for (int ii = i0; ii <= i1; ii++) {
     for (int jj = j0; jj <= j1; jj++) {
@@ -65,10 +71,12 @@ void FilterExtractor::WriteFilter(int frame) {
         label = 1;
       }
 
-      // Write it out
-      save_file_.write(reinterpret_cast<const char*>(&label), sizeof(int));
+      vals.push_back(label);
     }
   }
+
+  // Write it out
+  save_file_.write(reinterpret_cast<const char*>(vals.data()), vals.size()*sizeof(int));
 }
 
 void FilterExtractor::Run() {
