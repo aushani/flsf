@@ -18,19 +18,19 @@ MatchExtractor::MatchExtractor(const fs::path &base_path, const fs::path &save_p
 }
 
 void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
-  // Get bounds
-  int i0 = i - ps::kPatchSize / 2 - 1;
-  int i1 = i0 + ps::kPatchSize + 2;
+  // Get bounds (twice as big for buffer room when dealing with network training)
+  int i0 = i - ps::kPatchSize;
+  int i1 = i0 + ps::kPatchSize;
 
-  int j0 = j - ps::kPatchSize / 2 - 1;
-  int j1 = j0 + ps::kPatchSize + 2;
+  int j0 = j - ps::kPatchSize;
+  int j1 = j0 + ps::kPatchSize;
 
   int k0 = ps::kOccGridMinZ;
-  int k1 = ps::kOccGridMaxZ + 1; // inclusive
+  int k1 = ps::kOccGridMaxZ;
 
-  for (int ii = i0; ii < i1; ii++) {
-    for (int jj = j0; jj < j1; jj++) {
-      for (int kk = k0; kk < k1; kk++) {
+  for (int ii = i0; ii <= i1; ii++) {
+    for (int jj = j0; jj <= j1; jj++) {
+      for (int kk = k0; kk <= k1; kk++) {
         rt::Location loc(ii, jj, kk);
 
         float p = og.GetProbability(loc);
@@ -71,7 +71,8 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
 
       // If it's background, we should potentially skip it because we get a lot
       // of these
-      if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
+      //if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
+      if (c == kt::ObjectClass::NO_OBJECT) {
         continue;
       }
 
