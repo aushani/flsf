@@ -1,10 +1,8 @@
 #pragma once
 
 #include <cudnn.h>
-#include <boost/optional.hpp>
 
 #include "library/gpu_util/gpu_data.cu.h"
-#include "library/gpu_util/host_data.cu.h"
 
 namespace gu = library::gpu_util;
 
@@ -37,10 +35,6 @@ class ConvolutionalLayer {
   cudnnTensorDescriptor_t input_descriptor_;
   cudnnTensorDescriptor_t output_descriptor_;
 
-  cudnnTensorDescriptor_t z_descriptor_;
-
-  cudnnActivationDescriptor_t activation_descriptor_;
-
   cudnnTensorDescriptor_t biases_descriptor_;
 
   cudnnFilterDescriptor_t kernel_descriptor_;
@@ -49,7 +43,6 @@ class ConvolutionalLayer {
   cudnnConvolutionFwdAlgo_t convolution_algorithm_;
 
   std::shared_ptr<gu::GpuData<1, uint8_t> > d_workspace_;
-  std::shared_ptr<gu::GpuData<4, float>   > z_;
 };
 
 } // namespace tf

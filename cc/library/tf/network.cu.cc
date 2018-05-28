@@ -24,11 +24,6 @@ Network::Network(const ConvolutionalLayer &l1,
  res_cl2_(167, 167, l2.GetOutputLayers()),
  res_cl3_(167, 167, l3.GetOutputLayers()),
  res_filter_(167, 167, cl_filter.GetOutputLayers()) {
-  //input_.SetCoalesceDim(0);
-  //res_cl1_.SetCoalesceDim(0);
-  //res_cl2_.SetCoalesceDim(0);
-  //res_cl3_.SetCoalesceDim(0);
-  //res_filter_.SetCoalesceDim(0);
 }
 
 __global__ void SetUnknown(gu::GpuData<3, float> dense) {
@@ -300,11 +295,11 @@ Network Network::LoadNetwork(const fs::path &path) {
   filter_weights.CopyFrom(Network::LoadFile(path / "Filter_l1_weights.dat"));
   filter_biases.CopyFrom(Network::LoadFile(path / "Filter_l1_biases.dat"));
 
-  ConvolutionalLayer l1(167, 167, l1_weights, l1_biases);
-  ConvolutionalLayer l2(167, 167, l2_weights, l2_biases);
-  ConvolutionalLayer l3(167, 167, l3_weights, l3_biases);
-  ConvolutionalLayer latent(167, 167, latent_weights, latent_biases);
-  ConvolutionalLayer filter(167, 167, filter_weights, filter_biases);
+  ConvolutionalLayer l1(ps::kOccGridSizeXY, ps::kOccgridSizeXY, , l1_weights, l1_biases);
+  ConvolutionalLayer l2(ps::kOccgridSizeXY, , ps::kOccgridSizeXY, , l2_weights, l2_biases);
+  ConvolutionalLayer l3(ps::kOccgridSizeXY, , ps::kOccgridSizeXY, , l3_weights, l3_biases);
+  ConvolutionalLayer latent(ps::kOccgridSizeXY, , ps::kOccgridSizeXY, , latent_weights, latent_biases);
+  ConvolutionalLayer filter(ps::kOccgridSizeXY, , ps::kOccgridSizeXY, , filter_weights, filter_biases);
 
   printf("Loaded\n");
 

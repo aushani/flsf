@@ -294,14 +294,14 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
         energy_, energy_hat_, energy_hat_valid_, n_window_, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
-    printf("Expectation took %5.3f ms\n", t.GetMs());
+    //printf("Expectation took %5.3f ms\n", t.GetMs());
 
     t.Start();
     Maximization<<<blocks, threads>>>(energy_, energy_hat_,
         energy_hat_valid_, flow_est_, flow_valid_, n_window_);
     err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
-    printf("Maximization took %5.3f ms\n", t.GetMs());
+    //printf("Maximization took %5.3f ms\n", t.GetMs());
   }
   printf("Took %5.3f ms to evaluate EM flow\n", timer.GetMs());
 
