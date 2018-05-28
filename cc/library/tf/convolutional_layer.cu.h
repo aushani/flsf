@@ -11,7 +11,7 @@ namespace tf {
 
 class ConvolutionalLayer {
  public:
-  ConvolutionalLayer(int height, int width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases);
+  ConvolutionalLayer(size_t height, size_t width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases);
 
   int GetOutputLayers() const;
 

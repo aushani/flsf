@@ -10,7 +10,7 @@
 namespace library {
 namespace tf {
 
-ConvolutionalLayer::ConvolutionalLayer(int height, int width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
+ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
  height_(height),
  width_(width),
  input_channels_(weights.GetDim(2)),
