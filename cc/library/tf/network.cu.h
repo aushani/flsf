@@ -31,24 +31,15 @@ class Network {
   int GetEncodingDim() const;
 
  private:
-  ConvolutionalLayer cl1_;
-  ConvolutionalLayer cl2_;
-  ConvolutionalLayer cl3_;
-  ConvolutionalLayer clatent_;
-
-  ConvolutionalLayer cl_filter_;
-
   gu::GpuData<3, float> input_;
 
-  gu::GpuData<3, float> res_cl1_;
-  gu::GpuData<3, float> res_cl2_;
-  gu::GpuData<3, float> res_cl3_;
+  std::vector<ConvolutionalLayer> encoder_;
+  std::vector< gu::GpuData<3, float> > intermediate_encoder_results_;
 
-  gu::GpuData<3, float> res_filter_;
+  ConvolutionalLayer filter_;
+  gu::GpuData<3, float> filter_res_;
 
-  Network(const ConvolutionalLayer &l1, const ConvolutionalLayer &l2, const
-      ConvolutionalLayer &l3, const ConvolutionalLayer &latent, const
-      ConvolutionalLayer &clc);
+  Network(const std::vector<ConvolutionalLayer> &encoder, const ConvolutionalLayer &filter);
 
   static std::vector<float> LoadFile(const fs::path &path);
   static std::vector<int> LoadDimFile(const fs::path &path);

@@ -41,6 +41,8 @@ var_names = [
 'Encoder/l2/weights',
 'Encoder/l3/biases',
 'Encoder/l3/weights',
+'Encoder/l4/biases',
+'Encoder/l4/weights',
 'Encoder/latent/biases',
 'Encoder/latent/weights',
 'Filter/l1/biases',

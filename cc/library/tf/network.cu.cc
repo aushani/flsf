@@ -1,6 +1,7 @@
 #include "library/tf/network.cu.h"
 
 #include <boost/assert.hpp>
+#include <boost/format.hpp>
 
 #include "library/params/params.h"
 #include "library/timer/timer.h"
@@ -10,21 +11,15 @@ namespace ps = library::params;
 namespace library {
 namespace tf {
 
-Network::Network(const ConvolutionalLayer &l1,
-                 const ConvolutionalLayer &l2,
-                 const ConvolutionalLayer &l3,
-                 const ConvolutionalLayer &latent,
-                 const ConvolutionalLayer &cl_filter) :
- cl1_(l1),
- cl2_(l2),
- cl3_(l3),
- clatent_(latent),
- cl_filter_(cl_filter),
- input_(167, 167, 13),
- res_cl1_(167, 167, l1.GetOutputLayers()),
- res_cl2_(167, 167, l2.GetOutputLayers()),
- res_cl3_(167, 167, l3.GetOutputLayers()),
- res_filter_(167, 167, cl_filter.GetOutputLayers()) {
+Network::Network(const std::vector<ConvolutionalLayer> &encoder,
+                 const ConvolutionalLayer &filter) :
+ input_(ps::kOccGridSizeXY, ps::kOccGridSizeXY, ps::kOccGridSizeZ),
+ filter_(filter),
+ filter_res_(ps::kOccGridSizeXY, ps::kOccGridSizeXY, 2),
+ encoder_(encoder) {
+  for (const auto &cl : encoder_) {
+    intermediate_encoder_results_.emplace_back(ps::kOccGridSizeXY, ps::kOccGridSizeXY, cl.GetOutputLayers());
+  }
 }
 
 __global__ void SetUnknown(gu::GpuData<3, float> dense) {
@@ -80,7 +75,6 @@ __global__ void CopyOccGrid(const gu::GpuData<1, rt::Location> locations, const
   k -= k0;
 
   float val = p - 0.5;
-  //float val = p;
 
   dense(i, j, k) = val;
 }
@@ -90,11 +84,12 @@ void Network::SetInput(const rt::OccGrid &og) {
   int sz = og.GetLocations().size();
 
   // Clear (set unknown)
-  int threads = 1024;
-  int blocks = std::ceil(static_cast<float>(input_.Size()) / threads);
-  SetUnknown<<<threads, blocks>>>(input_);
-  cudaError_t err = cudaDeviceSynchronize();
-  BOOST_ASSERT(err == cudaSuccess);
+  input_.Set(0);
+  //int threads = 1024;
+  //int blocks = std::ceil(static_cast<float>(input_.Size()) / threads);
+  //SetUnknown<<<threads, blocks>>>(input_);
+  //cudaError_t err = cudaDeviceSynchronize();
+  //BOOST_ASSERT(err == cudaSuccess);
 
   if (og.GetLocations().size() > 0) {
     // Make GpuData objects
@@ -105,13 +100,13 @@ void Network::SetInput(const rt::OccGrid &og) {
     log_odds.CopyFrom(og.GetLogOdds());
 
     // Copy over
-    threads = 1024;
-    blocks = std::ceil(static_cast<float>(sz)/threads);
+    int threads = 1024;
+    int blocks = std::ceil(static_cast<float>(sz)/threads);
     CopyOccGrid<<<blocks, threads>>>(locations, log_odds, input_,
                                     ps::kOccGridMinXY, ps::kOccGridMaxXY,
                                     ps::kOccGridMinXY, ps::kOccGridMaxXY,
                                     ps::kOccGridMinZ, ps::kOccGridMaxZ);
-    err = cudaDeviceSynchronize();
+    cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
   }
 }
@@ -121,12 +116,20 @@ void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_ba
   library::timer::Timer t;
 
   t.Start();
-  cl1_.Apply(input_, &res_cl1_);
-  cl2_.Apply(res_cl1_, &res_cl2_);
-  cl3_.Apply(res_cl2_, &res_cl3_);
-  clatent_.Apply(res_cl3_, encoding);
+  gu::GpuData<3, float> input = input_;
+  for (int layer=0; layer<encoder_.size(); layer++) {
+    auto &cl = encoder_[layer];
 
-  cl_filter_.Apply(*encoding, &res_filter_);
+    if (layer < encoder_.size() - 1) {
+      gu::GpuData<3, float> output = intermediate_encoder_results_[layer];
+      cl.Apply(input, &output);
+      input = output;
+    } else {
+      cl.Apply(input, encoding);
+    }
+  }
+
+  filter_.Apply(*encoding, &filter_res_);
   printf("  Took %5.3f ms to run through network\n", t.GetMs());
 
   t.Start();
@@ -175,11 +178,11 @@ void Network::ComputeFilterProbability(gu::GpuData<2, float> *p_background) {
   threads.z = 1;
 
   dim3 blocks;
-  blocks.x = std::ceil(static_cast<float>(res_filter_.GetDim(0)) / threads.x);
-  blocks.y = std::ceil(static_cast<float>(res_filter_.GetDim(1)) / threads.y);
+  blocks.x = std::ceil(static_cast<float>(filter_res_.GetDim(0)) / threads.x);
+  blocks.y = std::ceil(static_cast<float>(filter_res_.GetDim(1)) / threads.y);
   blocks.z = 1;
 
-  SoftmaxKernel<<<blocks, threads>>>(res_filter_, *p_background);
+  SoftmaxKernel<<<blocks, threads>>>(filter_res_, *p_background);
   cudaError_t err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
 }
@@ -234,7 +237,7 @@ void Network::ComputeOccMask(gu::GpuData<2, int> *occ_mask) {
 }
 
 int Network::GetEncodingDim() const {
-  return clatent_.GetOutputLayers();
+  return encoder_[encoder_.size() - 1].GetOutputLayers();
 }
 
 // Load from file
@@ -269,49 +272,61 @@ Network Network::LoadNetwork(const fs::path &path) {
 
   std::vector<int> dim = LoadDimFile(path / "dim.dat");
 
-  gu::GpuData<1, float> l1_biases(dim[0]);
-  gu::GpuData<4, float> l1_weights(dim[1], dim[2], dim[3], dim[4]);
+  std::vector< gu::GpuData<1, float> > biases;
+  std::vector< gu::GpuData<4, float> > weights;
 
-  gu::GpuData<1, float> l2_biases(dim[5]);
-  gu::GpuData<4, float> l2_weights(dim[6], dim[7], dim[8], dim[9]);
+  // Figure out dimensions of everything
+  size_t i_at = 0;
+  while (i_at < dim.size()) {
+    biases.emplace_back(dim[i_at]);
+    weights.emplace_back(dim[i_at+1], dim[i_at+2], dim[i_at+3], dim[i_at+4]);
 
-  gu::GpuData<1, float> l3_biases(dim[10]);
-  gu::GpuData<4, float> l3_weights(dim[11], dim[12], dim[13], dim[14]);
+    i_at += 5;
+  }
 
-  gu::GpuData<1, float> latent_biases(dim[15]);
-  gu::GpuData<4, float> latent_weights(dim[16], dim[17], dim[18], dim[19]);
+  std::vector<ConvolutionalLayer> encoder;
+  for (int layer = 0; layer < biases.size() - 1; layer++) {
+    auto b = biases[layer];
+    auto w = weights[layer];
 
-  gu::GpuData<1, float> filter_biases(dim[20]);
-  gu::GpuData<4, float> filter_weights(dim[21], dim[22], dim[23], dim[24]);
+    fs::path bp;
+    fs::path wp;
 
-  l1_weights.CopyFrom(Network::LoadFile(path / "Encoder_l1_weights.dat"));
-  l1_biases.CopyFrom(Network::LoadFile(path / "Encoder_l1_biases.dat"));
+    if (layer == biases.size() - 2) {
+      bp = path / "Encoder_latent_biases.dat";
+      wp = path / "Encoder_latent_weights.dat";
+    } else {
+      bp = path / (boost::format("Encoder_l%d_biases.dat")  % (layer+1)).str();
+      wp = path / (boost::format("Encoder_l%d_weights.dat") % (layer+1)).str();
+    }
 
-  l2_weights.CopyFrom(Network::LoadFile(path / "Encoder_l2_weights.dat"));
-  l2_biases.CopyFrom(Network::LoadFile(path / "Encoder_l2_biases.dat"));
+    printf("Loading (%d) from %s\n", b.GetDim(0), bp.c_str());
+    printf("Loading (%d, %d, %d, %d) from %s\n", w.GetDim(0), w.GetDim(1), w.GetDim(2), w.GetDim(3), wp.c_str());
 
-  l3_weights.CopyFrom(Network::LoadFile(path / "Encoder_l3_weights.dat"));
-  l3_biases.CopyFrom(Network::LoadFile(path / "Encoder_l3_biases.dat"));
+    b.CopyFrom(Network::LoadFile(bp));
+    w.CopyFrom(Network::LoadFile(wp));
 
-  latent_weights.CopyFrom(Network::LoadFile(path / "Encoder_latent_weights.dat"));
-  latent_biases.CopyFrom(Network::LoadFile(path / "Encoder_latent_biases.dat"));
+    encoder.emplace_back(ps::kOccGridSizeXY, ps::kOccGridSizeXY, w, b);
+  }
 
-  //classifier_weights.CopyFrom(Network::LoadFile(path / "classifier_weights.dat"));
-  //classifier_biases.CopyFrom(Network::LoadFile(path / "classifier_biases.dat"));
+  int i_filter = biases.size() - 1;
+  auto b = biases[i_filter];
+  auto w = weights[i_filter];
 
-  filter_weights.CopyFrom(Network::LoadFile(path / "Filter_l1_weights.dat"));
-  filter_biases.CopyFrom(Network::LoadFile(path / "Filter_l1_biases.dat"));
+  auto bp = path / "Filter_l1_biases.dat";
+  auto wp = path / "Filter_l1_weights.dat";
 
-  ConvolutionalLayer l1(ps::kOccGridSizeXY, ps::kOccGridSizeXY, l1_weights, l1_biases);
-  ConvolutionalLayer l2(ps::kOccGridSizeXY, ps::kOccGridSizeXY, l2_weights, l2_biases);
-  ConvolutionalLayer l3(ps::kOccGridSizeXY, ps::kOccGridSizeXY, l3_weights, l3_biases);
-  ConvolutionalLayer latent(ps::kOccGridSizeXY, ps::kOccGridSizeXY, latent_weights, latent_biases);
-  ConvolutionalLayer filter(ps::kOccGridSizeXY, ps::kOccGridSizeXY, filter_weights, filter_biases);
+  printf("Loading (%d) from %s\n", b.GetDim(0), bp.c_str());
+  printf("Loading (%d, %d, %d, %d) from %s\n", w.GetDim(0), w.GetDim(1), w.GetDim(2), w.GetDim(3), wp.c_str());
+
+  b.CopyFrom(Network::LoadFile(bp));
+  w.CopyFrom(Network::LoadFile(wp));
+
+  ConvolutionalLayer filter(ps::kOccGridSizeXY, ps::kOccGridSizeXY, w, b);
 
   printf("Loaded\n");
 
-  //return Network(l1, l2, l3, latent, classifier);
-  return Network(l1, l2, l3, latent, filter);
+  return Network(encoder, filter);
 }
 
 } // namespace tf

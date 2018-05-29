@@ -17,8 +17,8 @@ extern int kOccGridMinXY;
 extern int kOccGridMaxXY;
 extern int kOccGridMinZ;
 extern int kOccGridMaxZ;
-extern size_t kOccGridSizeXY;
-extern size_t kOccGridSizeZ;
+extern int kOccGridSizeXY;
+extern int kOccGridSizeZ;
 
 // For flow computation
 //extern float kMaxFlow; // meters per second

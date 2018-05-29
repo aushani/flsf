@@ -16,8 +16,8 @@ int kOccGridMaxXY =  kOccGridRangeXY / (2 * kResolution);
 int kOccGridMinZ  = (kOccGridZ0 - kOccGridRangeZ/2.0) / kResolution;
 int kOccGridMaxZ  = (kOccGridZ0 + kOccGridRangeZ/2.0) / kResolution;
 
-size_t kOccGridSizeXY = kOccGridMaxXY - kOccGridMinXY + 1;
-size_t kOccGridSizeZ = kOccGridMaxZ - kOccGridMinZ + 1;
+int kOccGridSizeXY = kOccGridMaxXY - kOccGridMinXY + 1;
+int kOccGridSizeZ = kOccGridMaxZ - kOccGridMinZ + 1;
 
 // For flow computation
 //float kMaxFlow = 45.0; // meters per second
