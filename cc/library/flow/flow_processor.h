@@ -33,6 +33,8 @@ class FlowProcessor {
   void SetIterations(int iters);
   int GetIterations() const;
 
+  void SetSmoothing(float val);
+
   void Initialize(const kt::VelodyneScan &scan);
   void Update(const kt::VelodyneScan &scan, bool copy_data = true);
   void Refresh();
@@ -49,7 +51,7 @@ class FlowProcessor {
  private:
   std::shared_ptr<DeviceData> data_;
 
-  int iterations_ = 100;
+  int iterations_ = 20;
 
   //void UpdateClassificationMap();
   void UpdateBackgroundFilterMap();

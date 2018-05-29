@@ -56,6 +56,10 @@ void App::LoadPoses(const fs::path &tsf_dir, const std::string &date, int log_nu
   sm_poses_ = kt::Pose::LoadScanMatchedPoses(path);
 }
 
+void App::SetSmoothing(float val) {
+  flow_processor_.SetSmoothing(val);
+}
+
 void App::Run(const fs::path &save_path) {
   library::timer::Timer timer;
 

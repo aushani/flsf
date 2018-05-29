@@ -17,6 +17,10 @@ Solver::Solver(int nx, int ny, int n_window) :
  flow_valid_(nx, ny) {
 }
 
+void Solver::SetSmoothing(float val) {
+  smoothing_ = val;
+}
+
 __global__ void Expectation(const gu::GpuData<4, float> dist,
                             const gu::GpuData<2, float> p_background,
                             const gu::GpuData<2, int> occ_mask,
@@ -280,7 +284,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
   blocks.y = std::ceil( static_cast<float>(dist.GetDim(1)) / threads.y);
   blocks.z = 1;
 
-  float w_p = kSmoothing_;
+  float w_p = smoothing_;
 
   flow_valid_.Clear();
   energy_hat_valid_.Clear();

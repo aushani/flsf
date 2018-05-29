@@ -13,6 +13,8 @@ class Solver {
  public:
   Solver(int nx, int ny, int n_window);
 
+  void SetSmoothing(float val);
+
   FlowImage ComputeFlow(const gu::GpuData<4, float> &dist_sq,
                         const gu::GpuData<2, float> &p_background,
                         const gu::GpuData<2, int> &occ_mask,
@@ -20,12 +22,12 @@ class Solver {
                         int iters);
 
  private:
-  static constexpr float kSmoothing_ = 0.01;
-
   const int           nx_;
   const int           ny_;
 
   const int n_window_;
+
+  float smoothing_ = 0.01;
 
   gu::GpuData<2, float>  energy_;
   gu::GpuData<2, float>  energy_hat_;

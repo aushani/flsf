@@ -94,6 +94,10 @@ int FlowProcessor::GetIterations() const {
   return iterations_;
 }
 
+void FlowProcessor::SetSmoothing(float val) {
+  data_->solver.SetSmoothing(val);
+}
+
 void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
   auto og = data_->og_builder.GenerateOccGrid(scan.GetHits());
   data_->last_og2 = og;
