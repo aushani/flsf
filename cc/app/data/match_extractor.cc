@@ -57,6 +57,8 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
   double p_bg = 0.02;
   std::bernoulli_distribution rand_bg(p_bg);
 
+  float res = og1.GetResolution();
+
   // Iterate through occ grid
   for (int i1=ps::kOccGridMinXY; i1<=ps::kOccGridMaxXY; i1++) {
     for (int j1=ps::kOccGridMinXY; j1<=ps::kOccGridMaxXY; j1++) {
@@ -66,7 +68,7 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
       Eigen::Vector2f pos1(x1, y1);
 
       // Get object type
-      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, ps::kResolution);
+      kt::ObjectClass c = kt::GetObjectTypeAtLocation(&tracklets_, pos1, idx1, res);
 
       // Check to make sure we're in camera view (ie, have a valid label)
       if (!camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
@@ -80,8 +82,24 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
         continue;
       }
 
+      // Get filter label
+      // Don't really need this as it is right now (see above), but included for support with python code
+      int filter_label = -1;
+      if (camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
+        filter_label = 0;
+      } else if (c != kt::ObjectClass::NO_OBJECT) {
+        filter_label = 1;
+      }
+
       // Project position from og1 to og2
-      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, idx1, idx2, p1, p2);
+      bool track_disappears = false;
+      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, idx1, idx2, p1, p2, &track_disappears, res);
+
+      // If the track disappears, we can't really be sure of where the match is
+      if (track_disappears) {
+        continue;
+      }
+
       int i2_match = std::round(pos2.x() / ps::kResolution);
       int j2_match = std::round(pos2.y() / ps::kResolution);
 
@@ -102,14 +120,6 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
           // Now we can save this one!
           Write(og1, i1, j1);
           Write(og2, i2, j2);
-
-          // Get filter label
-          int filter_label = -1;
-          if (camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
-            filter_label = 0;
-          } else if (c != kt::ObjectClass::NO_OBJECT) {
-            filter_label = 1;
-          }
 
           float err_i = (i2 - (pos2.x() / ps::kResolution));
           float err_j = (j2 - (pos2.y() / ps::kResolution));

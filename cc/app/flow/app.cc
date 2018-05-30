@@ -205,7 +205,7 @@ void App::HandleClick(const Command &command) {
 
   printf("p_background: %5.3f %%\n", prob * 100.0);
 
-  kt::ObjectClass oc = kt::GetObjectTypeAtLocation(&tracklets_, pos1, scan_at_ - 1, fm.GetResolution());
+  kt::ObjectClass oc = kt::GetObjectTypeAtLocation(&tracklets_, pos1, scan_at_ - 1, res);
   printf("Object is %s\n", kt::ObjectClassToString(oc).c_str());
 
   // Get flow result
@@ -215,8 +215,13 @@ void App::HandleClick(const Command &command) {
   // Get ground truth
   const kt::Pose pose1 = sm_poses_[scan_at_ - 1];
   const kt::Pose pose2 = sm_poses_[scan_at_];
-  Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, scan_at_ - 1, scan_at_, pose1, pose2);
+  bool track_disappears = false;
+  Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, scan_at_ - 1, scan_at_, pose1, pose2, &track_disappears, res);
   Eigen::Vector2f flow = pos2 - pos1;
+
+  if (track_disappears) {
+    printf("Track disappears!\n");
+  }
 
   printf("True flow is %f %f\n", flow.x(), flow.y());
 

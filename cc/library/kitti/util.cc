@@ -9,6 +9,7 @@ Eigen::Vector2f FindCorrespondingPosition(Tracklets *tracklets,
                                           int scan_des,
                                           const Pose &p1,
                                           const Pose &p2,
+                                          bool *track_disappears,
                                           float res) {
   pm::Pose3d::Vector6Type x_1;
   x_1 << pos.x(), pos.y(), 0, 0, 0, 0;
@@ -18,6 +19,7 @@ Eigen::Vector2f FindCorrespondingPosition(Tracklets *tracklets,
   Tracklets::tPose *tp;
   Tracklets::tTracklet *tt;
   for (int i=0; i<tracklets->numberOfTracklets(); i++) {
+    // Does track exist at this frame?
     if (!tracklets->getPose(i, scan_at, tp)) {
         continue;
     }
@@ -42,7 +44,9 @@ Eigen::Vector2f FindCorrespondingPosition(Tracklets *tracklets,
 
     // Now project to next frame
     if (!tracklets->getPose(i, scan_des, tp)) {
-        continue;
+      /// This means the tracklet disappeared!
+      *track_disappears = true;
+      break;
     }
 
     pm::Pose3d::Vector6Type t_2;

@@ -49,7 +49,13 @@ void FlowImageEvaluator::Evaluate(const fl::FlowImage &flow_image, const fl::Fil
       kt::ObjectClass object_class = kt::GetObjectTypeAtLocation(&tracklets_, pos1, from, res);
 
       // Find true flow
-      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, from, to, pose1, pose2, res);
+      bool track_disappears = false;
+      Eigen::Vector2f pos2 = kt::FindCorrespondingPosition(&tracklets_, pos1, from, to, pose1, pose2, &track_disappears, res);
+
+      // If the track disappears we can't really evaluate this
+      if (track_disappears) {
+        continue;
+      }
 
       Eigen::Vector2f true_flow = pos2 - pos1;
 
