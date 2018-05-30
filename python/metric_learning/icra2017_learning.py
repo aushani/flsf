@@ -158,8 +158,8 @@ class Icra2017Learning:
         fig.set_size_inches(20, 20)
 
         plt.subplot(3, 2, 1)
-        self.make_pr_curve(match[is_background], scores[is_background], 'Background')
-        self.make_pr_curve(match[is_foreground], scores[is_foreground], 'Foreground')
+        #self.make_pr_curve(match[is_background], scores[is_background], 'Background')
+        #self.make_pr_curve(match[is_foreground], scores[is_foreground], 'Foreground')
         self.make_pr_curve(match, scores, 'All')
 
         for i, cumul in enumerate([False, True]):
