@@ -558,7 +558,7 @@ if __name__ == '__main__':
     flow_dm = FlowDataManager()
 
     filter_dm.make_validation(50)
-    flow_dm.make_validation(10000)
+    flow_dm.make_validation(1000)
 
     ml = MetricLearning(filter_dm, flow_dm)
 

@@ -5,6 +5,7 @@ from old_batch_manager import *
 import time
 import matplotlib.pyplot as plt
 import sklearn.metrics
+import sys
 
 class Icra2017Learning:
 
@@ -74,7 +75,7 @@ class Icra2017Learning:
                         self.match :   self.validation_set.match,
                    }
 
-        iteration = 0
+        iteration = start_iter + 1
 
         it_save = 100000
         it_plot = 100000
