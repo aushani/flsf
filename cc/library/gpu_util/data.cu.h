@@ -77,6 +77,18 @@ class Data {
     }
   }
 
+  void Set(const T &val) {
+    if (L == DataLocation::ON_DEVICE) {
+      thrust::fill(Begin(), Begin() + Size(), val);
+      cudaError_t err = cudaDeviceSynchronize();
+      BOOST_ASSERT(err == cudaSuccess);
+    } else { // if L == DataLocation::ON_HOST
+      for (int i=0; i<Size(); i++) {
+        data_[i] = val;
+      }
+    }
+  }
+
   __host__ __device__ const T* GetRawPointer() const {
     return data_;
   }

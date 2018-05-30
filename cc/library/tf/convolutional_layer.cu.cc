@@ -129,7 +129,7 @@ struct leaky_relu_op : public thrust::unary_function<float, float> {
 };
 
 void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output) {
-  //library::timer::Timer t;
+  library::timer::Timer t;
 
   // Check dimensions
   BOOST_ASSERT(input.GetDim(0) == output->GetDim(0));
@@ -150,7 +150,7 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   cudnnStatus_t status;
   cudaError_t err;
 
-  //t.Start();
+  t.Start();
   status = cudnnConvolutionForward(cudnn,
                                    &alpha,
                                    input_descriptor_,
@@ -167,9 +167,9 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
   err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
-  //printf("\tConvolution took %5.3f ms\n", t.GetMs());
+  printf("\tConvolution took %5.3f ms\n", t.GetMs());
 
-  //t.Start();
+  t.Start();
   status = cudnnAddTensor(cudnn,
                           &alpha,
                           biases_descriptor_,
@@ -180,9 +180,9 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
   err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
-  //printf("\tBiases took %5.3f ms\n", t.GetMs());
+  printf("\tBiases took %5.3f ms\n", t.GetMs());
 
-  //t.Start();
+  t.Start();
   thrust::transform(output->Begin(),
                     output->Begin() + output->Size(),
                     output->Begin(),
@@ -190,7 +190,7 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   cudaDeviceSynchronize();
   err = cudaDeviceSynchronize();
   BOOST_ASSERT(err == cudaSuccess);
-  //printf("\tLeaky RELU activation took %5.3f ms\n", t.GetMs());
+  printf("\tLeaky RELU activation took %5.3f ms\n", t.GetMs());
 }
 
 int ConvolutionalLayer::GetOutputLayers() const {

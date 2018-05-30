@@ -47,7 +47,7 @@ dirnames = [
 def load(fn):
     return np.loadtxt(fn)
 
-def process_class(classname, smoothing):
+def get_within_30cm(classname, smoothing):
     errs = None
     for d in dirnames:
         fn  = '%s/%s/%s.csv' % (d, smoothing, classname)
@@ -62,37 +62,37 @@ def process_class(classname, smoothing):
             errs = np.append(errs, res)
 
     if errs is None:
-        return
-
-    print ''
-    print classname
-    print '\tCount: ', len(errs)
+        return None
 
     n_30 = np.sum(errs < 0.3) + 0.0
-    print '\tWithin 30 cm', n_30 / len(errs)
+    return n_30 / len(errs)
 
-    print '\tMean', np.mean(errs)
-    print '\tMedian', np.median(errs)
+def make_smoothing_plot(classname):
+    print classname
+    xs = []
+    ys = []
+    for smoothing in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]:
+        p_30 = get_within_30cm(classname, smoothing)
 
-    plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
-    plt.plot([0.3, 0.3], [0, 0.35], 'k-')
-    plt.grid()
-    plt.xlim(0, 1)
-    plt.ylim(0, 0.35)
+        if not p_30 is None:
+            xs.append(smoothing)
+            ys.append(p_30)
+
+    plt.semilogx(xs, ys)
+    plt.xlabel('Smoothing param')
+    plt.ylabel('Percent within 30 cm')
     plt.title(classname)
 
-smoothing = 0.04
-
 plt.subplot(2, 2, 1)
-process_class('Car', smoothing)
+make_smoothing_plot('Car')
 
 plt.subplot(2, 2, 2)
-process_class('NoObject', smoothing)
+make_smoothing_plot('NoObject')
 
 plt.subplot(2, 2, 3)
-process_class('Cyclist', smoothing)
+make_smoothing_plot('Cyclist')
 
 plt.subplot(2, 2, 4)
-process_class('Pedestrian', smoothing)
+make_smoothing_plot('Pedestrian')
 
 plt.show()

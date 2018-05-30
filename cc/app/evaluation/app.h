@@ -21,6 +21,8 @@ class App {
 
   void Run(const fs::path &save_path);
 
+  void SetSmoothing(float val);
+
  private:
   std::vector<kt::VelodyneScan> scans_;
   kt::Tracklets tracklets_;

@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
     ("kitti-log-date", po::value<std::string>(), "KITTI data")
     ("log-num,l", po::value<int>(), "KITTI Log Number")
     ("save-path,p", po::value<fs::path>(), "Where to save evaluation")
+    ("smoothing,s", po::value<float>(), "Smoothing parameter")
     ;
 
   // Read options
@@ -53,6 +54,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  float smoothing = -1;
+  if (vm.count("smoothing")) {
+    smoothing = vm["smoothing"].as<float>();
+  }
+
   printf("Using log %d\n", log_num);
 
   // Check that path exists
@@ -70,6 +76,12 @@ int main(int argc, char** argv) {
 
   printf("Running evaluation\n");
   app::evaluation::App eval(fs::path(tsf_data_dir), kitti_log_date, log_num);
+
+  if (smoothing > 0) {
+    printf("Setting smoothing parameter to %f\n", smoothing);
+    eval.SetSmoothing(smoothing);
+  }
+
   eval.Run(save_path);
 
   printf("\nDone\n");
