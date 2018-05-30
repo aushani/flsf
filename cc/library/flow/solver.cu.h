@@ -27,7 +27,7 @@ class Solver {
 
   const int n_window_;
 
-  float smoothing_ = 0.01;
+  float smoothing_ = 0.04;
 
   gu::GpuData<2, float>  energy_;
   gu::GpuData<2, float>  energy_hat_;
