@@ -117,18 +117,29 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
       double r = val;
       double g = 0;
       double b = 1-r;
+      double a = 0.5;
 
-      osg::Vec4 color(r, g, b, 0.5);
-      im->setColor(color, i, j, 0);
-
-      if (dist < best_dist || best_dist < 0) {
-        best_i = i;
-        best_j = j;
-        best_dist = dist;
+      if (dist < 0) {
+        r = 0.2;
+        g = 0.2;
+        b = 0.2;
+        a = 0.2;
       }
 
-      if (dist > highest_dist) {
-        highest_dist = dist;
+
+      osg::Vec4 color(r, g, b, a);
+      im->setColor(color, i, j, 0);
+
+      if (dist >= 0) {
+        if (dist < best_dist || best_dist < 0) {
+          best_i = i;
+          best_j = j;
+          best_dist = dist;
+        }
+
+        if (dist > highest_dist) {
+          highest_dist = dist;
+        }
       }
     }
   }
