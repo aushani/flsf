@@ -19,11 +19,11 @@ MatchExtractor::MatchExtractor(const fs::path &base_path, const fs::path &save_p
 
 void MatchExtractor::Write(const rt::OccGrid &og, int i, int j) {
   // Get bounds (twice as big for buffer room when dealing with network training)
-  int i0 = i - ps::kPatchSize;
-  int i1 = i0 + 2 * ps::kPatchSize;
+  int i0 = i - ps::kPadding/2;
+  int i1 = i0 + ps::kPadding;
 
-  int j0 = j - ps::kPatchSize;
-  int j1 = j0 + 2 * ps::kPatchSize;
+  int j0 = j - ps::kPadding/2;
+  int j1 = j0 + ps::kPadding;
 
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;
@@ -54,7 +54,7 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
   std::bernoulli_distribution rand_match(p_match);
 
   // How often do we try out a spot in the occ grid if it's background
-  double p_bg = 0.02;
+  double p_bg = 0.01;
   std::bernoulli_distribution rand_bg(p_bg);
 
   float res = og1.GetResolution();
@@ -77,13 +77,12 @@ void MatchExtractor::ProcessOccGrids(const rt::OccGrid &og1, const rt::OccGrid &
 
       // If it's background, we should potentially skip it because we get a lot
       // of these
-      //if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
-      if (c == kt::ObjectClass::NO_OBJECT) {
+      //if (c == kt::ObjectClass::NO_OBJECT) {
+      if (c == kt::ObjectClass::NO_OBJECT && !rand_bg(random_generator_)) {
         continue;
       }
 
       // Get filter label
-      // Don't really need this as it is right now (see above), but included for support with python code
       int filter_label = -1;
       if (camera_cal_.InCameraView(x1, y1, z1) && c == kt::ObjectClass::NO_OBJECT) {
         filter_label = 0;
