@@ -10,13 +10,16 @@
 namespace library {
 namespace tf {
 
-ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::GpuData<4, float> &weights, const gu::GpuData<1, float> &biases) :
- height_(height),
- width_(width),
- input_channels_(weights.GetDim(2)),
- output_channels_(weights.GetDim(3)),
+ConvolutionalLayer::ConvolutionalLayer(size_t input_height, size_t input_width, const gu::GpuData<4, float> &weights,
+    const gu::GpuData<1, float> &biases, bool zero_padding) :
+ input_height_(input_height),
+ input_width_(input_width),
  kernel_height_(weights.GetDim(0)),
  kernel_width_(weights.GetDim(1)),
+ output_height_(input_height + ((zero_padding) ? 0 : (-kernel_height_ + 1))),
+ output_width_(input_width   + ((zero_padding) ? 0 : (-kernel_width_  + 1))),
+ input_channels_(weights.GetDim(2)),
+ output_channels_(weights.GetDim(3)),
  weights_(weights),
  biases_(biases) {
   BOOST_ASSERT(weights_.GetDim(3) == biases_.GetDim(0));
@@ -33,8 +36,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::Gp
                                       CUDNN_DATA_FLOAT,     // data type
                                       1,                    // batch size
                                       input_channels_,      // channels,
-                                      height_,              // image height
-                                      width_);              // image width
+                                      input_height_,        // image height
+                                      input_width_);        // image width
   BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
   status = cudnnCreateTensorDescriptor(&output_descriptor_);
@@ -46,8 +49,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::Gp
                                       CUDNN_DATA_FLOAT,     // data type
                                       1,                    // batch size
                                       output_channels_,     // channels,
-                                      height_,              // image height
-                                      width_);              // image width
+                                      output_height_,       // image height
+                                      output_width_);       // image width
   BOOST_ASSERT(status == CUDNN_STATUS_SUCCESS);
 
   // Bias
@@ -81,8 +84,8 @@ ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::Gp
 
   // Convolution
   status = cudnnSetConvolution2dDescriptor(convolution_desriptor_,
-                                           kernel_height_/2,           // pad height
-                                           kernel_width_/2,            // pad weight
+                                           zero_padding ? kernel_height_/2 : 0,           // pad height
+                                           zero_padding ? kernel_width_/2  : 0,            // pad weight
                                            1,                          // vertical stride
                                            1,                          // horizontal stride
                                            1,                          // dialation height
@@ -119,27 +122,18 @@ ConvolutionalLayer::ConvolutionalLayer(size_t height, size_t width, const gu::Gp
   d_workspace_ = std::make_shared<gu::GpuData<1, uint8_t> >(static_cast<int>(workspace_bytes));
 }
 
-struct leaky_relu_op : public thrust::unary_function<float, float> {
-  __host__ __device__ float operator()(float x) {
-    if (x < 0) {
-      return x * 0.2;
-    }
-    return x;
-  }
-};
-
 void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output) {
   library::timer::Timer t;
 
   // Check dimensions
-  BOOST_ASSERT(input.GetDim(0) == output->GetDim(0));
-  BOOST_ASSERT(input.GetDim(1) == output->GetDim(1));
+  BOOST_ASSERT(input.GetDim(0) == input_height_);
+  BOOST_ASSERT(input.GetDim(1) == input_width_);
 
-  BOOST_ASSERT(input.GetDim(2) == weights_.GetDim(2));
+  BOOST_ASSERT(output->GetDim(0) == output_height_);
+  BOOST_ASSERT(output->GetDim(1) == output_width_);
+
+  BOOST_ASSERT(input.GetDim(2)   == weights_.GetDim(2));
   BOOST_ASSERT(output->GetDim(2) == weights_.GetDim(3));
-
-  BOOST_ASSERT(input.GetDim(0) == height_);
-  BOOST_ASSERT(input.GetDim(1) == width_);
 
   const float alpha = 1.0;
   const float beta = 0.0;
@@ -182,19 +176,37 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   BOOST_ASSERT(err == cudaSuccess);
   printf("\tBiases took %5.3f ms\n", t.GetMs());
 
-  t.Start();
-  thrust::transform(output->Begin(),
-                    output->Begin() + output->Size(),
-                    output->Begin(),
-                    leaky_relu_op());
-  cudaDeviceSynchronize();
-  err = cudaDeviceSynchronize();
-  BOOST_ASSERT(err == cudaSuccess);
-  printf("\tLeaky RELU activation took %5.3f ms\n", t.GetMs());
+  if (activation_ == Activation::LEAKY_RELU) {
+    t.Start();
+    thrust::transform(output->Begin(), output->End(), output->Begin(), leaky_relu());
+    err = cudaDeviceSynchronize();
+    BOOST_ASSERT(err == cudaSuccess);
+    printf("\tLeaky RELU activation took %5.3f ms\n", t.GetMs());
+  }
+}
+
+void ConvolutionalLayer::SetActivation(const Activation &op) {
+  activation_ = op;
 }
 
 int ConvolutionalLayer::GetOutputLayers() const {
   return biases_.GetDim(0);
+}
+
+int ConvolutionalLayer::GetInputHeight() const {
+  return input_height_;
+}
+
+int ConvolutionalLayer::GetInputWidth() const {
+  return input_width_;
+}
+
+int ConvolutionalLayer::GetOutputHeight() const {
+  return output_height_;
+}
+
+int ConvolutionalLayer::GetOutputWidth() const {
+  return output_width_;
 }
 
 } // namespace tf

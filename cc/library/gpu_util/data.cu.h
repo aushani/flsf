@@ -68,25 +68,29 @@ class Data {
     Release();
   }
 
+  template<DataLocation L2 = L, typename std::enable_if<L2 == DataLocation::ON_HOST, int>::type = 0>
   void Clear() {
-    if (L == DataLocation::ON_DEVICE) {
-      cudaError_t err = cudaMemset(data_, 0, sizeof(T) * elements_);
-      BOOST_ASSERT(err == cudaSuccess);
-    } else { // if L == DataLocation::ON_HOST
-      memset(data_, 0, sizeof(T) * elements_);
+    memset(data_, 0, sizeof(T) * elements_);
+  }
+
+  template<DataLocation L2 = L, typename std::enable_if<L2 == DataLocation::ON_DEVICE, int>::type = 0>
+  void Clear() {
+    cudaError_t err = cudaMemset(data_, 0, sizeof(T) * elements_);
+    BOOST_ASSERT(err == cudaSuccess);
+  }
+
+  template<DataLocation L2 = L, typename std::enable_if<L2 == DataLocation::ON_HOST, int>::type = 0>
+  void Set(const T &val) {
+    for (int i=0; i<Size(); i++) {
+      data_[i] = val;
     }
   }
 
+  template<DataLocation L2 = L, typename std::enable_if<L2 == DataLocation::ON_DEVICE, int>::type = 0>
   void Set(const T &val) {
-    if (L == DataLocation::ON_DEVICE) {
-      thrust::fill(Begin(), Begin() + Size(), val);
-      cudaError_t err = cudaDeviceSynchronize();
-      BOOST_ASSERT(err == cudaSuccess);
-    } else { // if L == DataLocation::ON_HOST
-      for (int i=0; i<Size(); i++) {
-        data_[i] = val;
-      }
-    }
+    thrust::fill(Begin(), Begin() + Size(), val);
+    cudaError_t err = cudaDeviceSynchronize();
+    BOOST_ASSERT(err == cudaSuccess);
   }
 
   __host__ __device__ const T* GetRawPointer() const {
