@@ -48,7 +48,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     return;
   }
 
-  if (p_background(i_from, j_from) > 0.5 || occ_mask(i_from, j_from) == 0) {
+  if (p_background(i_from, j_from) > 0.5 || occ_mask(i_from, j_from) == -1) {
     flow_est(i_from, j_from, 0) = 0;
     flow_est(i_from, j_from, 1) = 0;
 
