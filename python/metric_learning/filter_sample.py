@@ -3,12 +3,14 @@ import numpy as np
 class FilterSample:
 
     def __init__(self, data, rotate=0, flip=False):
-        self.width = 167
-        self.length = 167
+        self.input_width = 167 + 24
+        self.input_length = 167 + 24
+        self.output_width = 167
+        self.output_length = 167
         self.height = 13
 
-        self.occ = data['occ'].reshape((self.width, self.length, self.height))
-        self.filter = data['filter'].reshape((self.width, self.length))
+        self.occ = data['occ'].reshape((self.input_width, self.input_length, self.height))
+        self.filter = data['filter'].reshape((self.output_width, self.output_length))
 
         # Rescale range from 0-1 to -0.5 - +0.5
         self.occ -= 0.5

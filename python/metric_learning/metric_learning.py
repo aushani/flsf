@@ -11,12 +11,14 @@ class MetricLearning:
     def __init__(self, filter_data=None, flow_data=None, exp_name="exp"):
         self.exp_name = exp_name
 
-        self.full_width  = 167
-        self.full_length = 167
+        self.full_input_width  = 167 + 24
+        self.full_input_length = 167 + 24
+        self.full_output_width  = 167
+        self.full_output_length = 167
         self.full_height = 13
 
-        self.patch_width  = 27
-        self.patch_length = 27
+        self.patch_width  = 25
+        self.patch_length = 25
         self.patch_height = 13
 
         if filter_data:
@@ -39,7 +41,7 @@ class MetricLearning:
         self.pos_weight = (1.0 / num_pos) / denom
 
         # Inputs
-        self.full_occ    = tf.placeholder(tf.float32, shape=[None, self.full_width, self.full_length, self.full_height],
+        self.full_occ    = tf.placeholder(tf.float32, shape=[None, self.full_input_width, self.full_input_length, self.full_height],
                                           name='full_occ')
 
         self.patch1      = tf.placeholder(tf.float32, shape=[None, self.patch_width, self.patch_length, self.patch_height], name='patch1')
@@ -48,16 +50,13 @@ class MetricLearning:
         self.err2        = tf.placeholder(tf.float32, shape=[None,], name='err2')
 
         # Ground truth outputs
-        self.filter  = tf.placeholder(tf.int32, shape=[None, self.full_width, self.full_length], name='filter')
+        self.filter  = tf.placeholder(tf.int32, shape=[None, self.full_output_width, self.full_output_length], name='filter')
         self.match   = tf.placeholder(tf.int32, shape=[None,], name='match')
 
         self.patch1_filter = tf.placeholder(tf.int32, shape=[None,], name='patch1_filter')
 
         # Dropout
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
-
-        # Encoder
-        self.encoding = self.get_encoding(self.full_occ)
 
         # Filter
         self.make_filter(self.full_occ)
@@ -132,7 +131,7 @@ class MetricLearning:
         return pred_filter, filter_probs
 
     def make_filter(self, occ):
-        self.pred_filter, self.filter_probs = self.get_filter(occ)
+        self.pred_filter, self.filter_probs = self.get_filter(occ, padding='VALID')
 
         is_background = tf.equal(self.filter, 0)
         is_foreground = tf.equal(self.filter, 1)
@@ -184,28 +183,28 @@ class MetricLearning:
         #print pred_patch_filter.shape
         #print pred_patch_filter_prob.shape
 
-        assert latent1.shape[1] == 5
-        assert latent1.shape[2] == 5
+        assert latent1.shape[1] == 3
+        assert latent1.shape[2] == 3
 
-        assert latent2.shape[1] == 5
-        assert latent2.shape[2] == 5
+        assert latent2.shape[1] == 3
+        assert latent2.shape[2] == 3
 
-        assert pred_patch_filter.shape[1] == 3
-        assert pred_patch_filter.shape[2] == 3
+        assert pred_patch_filter.shape[1] == 1
+        assert pred_patch_filter.shape[2] == 1
 
-        assert pred_patch_filter_prob.shape[1] == 3
-        assert pred_patch_filter_prob.shape[2] == 3
+        assert pred_patch_filter_prob.shape[1] == 1
+        assert pred_patch_filter_prob.shape[2] == 1
 
         # Take center encoding
-        latent1 = latent1[:, 2, 2, :]
-        latent2 = latent2[:, 2, 2, :]
+        latent1 = latent1[:, 1, 1, :]
+        latent2 = latent2[:, 1, 1, :]
         #latent1 = tf.squeeze(latent1, axis=[1, 2])
         #latent2 = tf.squeeze(latent2, axis=[1, 2])
 
-        pred_patch_filter = pred_patch_filter[:, 1, 1, :]
-        pred_patch_filter_prob = pred_patch_filter_prob[:, 1, 1, :]
-        #pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
-        #pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
+        #pred_patch_filter = pred_patch_filter[:, 0, 0, :]
+        #pred_patch_filter_prob = pred_patch_filter_prob[:, 0, 0, :]
+        pred_patch_filter = tf.squeeze(pred_patch_filter, axis=[1, 2])
+        pred_patch_filter_prob = tf.squeeze(pred_patch_filter_prob, axis=[1, 2])
 
         prob_bg = pred_patch_filter_prob[:, 0]
         prob_fg = pred_patch_filter_prob[:, 1]

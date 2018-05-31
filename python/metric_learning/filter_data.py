@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class FilterDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning_v2/', shuffle=True, evaluation=False):
+    def __init__(self, path='/home/aushani/data/full_learning_v3/', shuffle=True, evaluation=False):
         # only use first 10 for training
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/filter.bin' % (path),
@@ -58,12 +58,16 @@ class FilterDataManager:
         self.f_ptrs = {}
         self.file_ranges = {}
 
-        self.width = 167
-        self.length = 167
+        self.padding = 24
+
+        self.output_width = 167
+        self.output_length = 167
+        self.input_width = 167 + self.padding
+        self.input_length = 167 + self.padding
         self.height = 13
 
-        self.size_occ = self.width * self.length * self.height
-        self.size_filter = self.width * self.length
+        self.size_occ = self.input_width * self.input_length * self.height
+        self.size_filter = self.output_width * self.output_length
 
         self.sample_size_bytes = (self.size_occ + self.size_filter)*4
 

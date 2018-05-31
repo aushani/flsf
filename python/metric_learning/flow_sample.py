@@ -3,8 +3,8 @@ import numpy as np
 class FlowSample:
 
     def __init__(self, data, rotate=0, flip=False):
-        self.width = 27
-        self.length = 27
+        self.width = 25
+        self.length = 25
         self.height = 13
 
         self.occ1 = data['occ1'].reshape((self.width, self.length, self.height))
