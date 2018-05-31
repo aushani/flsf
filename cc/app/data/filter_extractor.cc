@@ -17,11 +17,11 @@ FilterExtractor::FilterExtractor(const fs::path &base_path, const fs::path &save
 
 void FilterExtractor::WriteOccGrid(const rt::OccGrid &og) {
   // Get bounds
-  int i0 = ps::kOccGridMinXY;
-  int i1 = ps::kOccGridMaxXY;
+  int i0 = ps::kOccGridMinXY - ps::kPadding/2;
+  int i1 = ps::kOccGridMaxXY + ps::kPadding/2;
 
-  int j0 = ps::kOccGridMinXY;
-  int j1 = ps::kOccGridMaxXY;
+  int j0 = ps::kOccGridMinXY - ps::kPadding/2;
+  int j1 = ps::kOccGridMaxXY + ps::kPadding/2;
 
   int k0 = ps::kOccGridMinZ;
   int k1 = ps::kOccGridMaxZ;

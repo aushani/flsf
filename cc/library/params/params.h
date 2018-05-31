@@ -28,5 +28,7 @@ extern int kMaxSearchDist;
 
 extern int kPatchSize;
 
+extern int kPadding;
+
 } // params
 } // library

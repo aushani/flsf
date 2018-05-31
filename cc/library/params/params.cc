@@ -27,5 +27,7 @@ int kMaxSearchDist =  kSearchSize / 2;
 
 int kPatchSize = 13;
 
+int kPadding = 24;
+
 } // params
 } // library
