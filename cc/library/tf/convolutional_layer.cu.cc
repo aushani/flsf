@@ -14,15 +14,15 @@ ConvolutionalLayer::ConvolutionalLayer(size_t input_height, size_t input_width, 
     const gu::GpuData<1, float> &biases, bool zero_padding) :
  input_height_(input_height),
  input_width_(input_width),
- kernel_height_(weights.GetDim(0)),
- kernel_width_(weights.GetDim(1)),
+ kernel_height_(weights.GetDim(1)),
+ kernel_width_(weights.GetDim(2)),
  output_height_(input_height + ((zero_padding) ? 0 : (-kernel_height_ + 1))),
  output_width_(input_width   + ((zero_padding) ? 0 : (-kernel_width_  + 1))),
- input_channels_(weights.GetDim(2)),
- output_channels_(weights.GetDim(3)),
+ input_channels_(weights.GetDim(3)),
+ output_channels_(weights.GetDim(0)),
  weights_(weights),
  biases_(biases) {
-  BOOST_ASSERT(weights_.GetDim(3) == biases_.GetDim(0));
+  BOOST_ASSERT(biases_.GetDim(0) == output_channels_);
 
   cudnnHandle_t cudnn = GetCudnnHandle();
   cudnnStatus_t status;
@@ -132,8 +132,8 @@ void ConvolutionalLayer::Apply(const gu::GpuData<3, float> &input, gu::GpuData<3
   BOOST_ASSERT(output->GetDim(0) == output_height_);
   BOOST_ASSERT(output->GetDim(1) == output_width_);
 
-  BOOST_ASSERT(input.GetDim(2)   == weights_.GetDim(2));
-  BOOST_ASSERT(output->GetDim(2) == weights_.GetDim(3));
+  BOOST_ASSERT(input.GetDim(2)   == input_channels_);
+  BOOST_ASSERT(output->GetDim(2) == output_channels_);
 
   const float alpha = 1.0;
   const float beta = 0.0;
@@ -189,8 +189,12 @@ void ConvolutionalLayer::SetActivation(const Activation &op) {
   activation_ = op;
 }
 
+int ConvolutionalLayer::GetInputLayers() const {
+  return input_channels_;
+}
+
 int ConvolutionalLayer::GetOutputLayers() const {
-  return biases_.GetDim(0);
+  return output_channels_;
 }
 
 int ConvolutionalLayer::GetInputHeight() const {

@@ -22,6 +22,7 @@ class ConvolutionalLayer {
   int GetInputWidth() const;
   int GetOutputHeight() const;
   int GetOutputWidth() const;
+  int GetInputLayers() const;
   int GetOutputLayers() const;
 
   void Apply(const gu::GpuData<3, float> &input, gu::GpuData<3, float> *output);
