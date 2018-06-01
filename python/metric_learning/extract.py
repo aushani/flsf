@@ -61,13 +61,14 @@ for var_name in var_names:
         var_val = np.moveaxis(var_val, [0, 1, 2, 3], [1, 2, 3, 0])
         print 'Reshape to ', var_val.shape
 
+    shape = var_val.shape
+
     var_val = var_val.flatten()
     print var_val.shape
 
     fn = out_dir + '/' + var_name.replace('/', '_') + '.dat'
     np.savetxt(fn, var_val, delimiter=' ')
 
-    shape = var.shape
     shape_str = ''
     for s in shape:
         shape_str += '%d ' % (s)
