@@ -1,7 +1,5 @@
 #include "library/tf/network.cu.h"
 
-#include <thrust/reduce.h>
-
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
 
@@ -80,9 +78,6 @@ void Network::SetInput(const rt::OccGrid &og) {
                                      ps::kOccGridMinZ, ps::kOccGridMaxZ);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
-
-    float sum = thrust::reduce(input_.Begin(), input_.End());
-    printf("branch input sum: %f\n", sum);
   }
 }
 
@@ -101,27 +96,10 @@ void Network::Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_ba
       gu::GpuData<3, float> output = intermediate_encoder_results_[layer];
       cl.Apply(input, &output);
       input = output;
-
-      float sum = thrust::reduce(output.Begin(), output.End());
-      printf("branch output sum: %f\n", sum);
-      printf("branch output dim: %d %d %d\n", output.GetDim(0), output.GetDim(1), output.GetDim(2));
-
-      gu::HostData<3, float> h_output(output);
-      for (int i=0; i<10; i++) {
-        printf("branch (42, 42, %d) = %f\n", i, h_output(42, 42, i));
-      }
     } else {
       cl.Apply(input, encoding);
     }
   }
-
-  gu::HostData<3, float> h_output(*encoding);
-  for (int i=0; i<10; i++) {
-    printf("branch (42, 42, %d) = %f\n", i, h_output(42, 42, i));
-  }
-
-  float sum = thrust::reduce(encoding->Begin(), encoding->End());
-  printf("branch encoding sum: %f\n", sum);
 
   printf("  Classifier\n");
   filter_.Apply(input, &filter_res_);
@@ -288,7 +266,7 @@ Network Network::LoadNetwork(const fs::path &path) {
   std::vector< gu::GpuData<1, float> > biases;
   std::vector< gu::GpuData<4, float> > weights;
 
-  bool zero_padding = true;
+  bool zero_padding = false;
 
   int padding = 0;
 
@@ -367,28 +345,26 @@ Network Network::LoadNetwork(const fs::path &path) {
 
   // Add a dummy convolutional layer to get the encoded image to the right dimensions
   // (remember it's a bit padded right now due to the filter classifier)
-  if (true || !zero_padding) {
-    int layers = filter.GetInputLayers();
-    int height = w_filter.GetDim(1);
-    int width = w_filter.GetDim(2);
-    gu::HostData<4, float> w_dummy(layers, height, width, layers);
-    gu::HostData<1, float> b_dummy(layers);
+  int layers = filter.GetInputLayers();
+  int height = w_filter.GetDim(1);
+  int width = w_filter.GetDim(2);
+  gu::HostData<4, float> w_dummy(layers, height, width, layers);
+  gu::HostData<1, float> b_dummy(layers);
 
-    w_dummy.Set(0.0f);
-    for (int i=0; i<layers; i++) {
-      w_dummy(i, height/2, width/2, i) = 1.0;
-    }
-
-    b_dummy.Set(0.0f);
-
-    encoder.emplace_back(ps::kOccGridSizeXY + ((zero_padding) ? 0:padding),
-                         ps::kOccGridSizeXY + ((zero_padding) ? 0:padding),
-                         gu::GpuData<4, float>(w_dummy),
-                         gu::GpuData<1, float>(b_dummy),
-                         zero_padding);
-
-    // no activation
+  w_dummy.Set(0.0f);
+  for (int i=0; i<layers; i++) {
+    w_dummy(i, height/2, width/2, i) = 1.0;
   }
+
+  b_dummy.Set(0.0f);
+
+  encoder.emplace_back(ps::kOccGridSizeXY + ((zero_padding) ? 0:padding),
+                       ps::kOccGridSizeXY + ((zero_padding) ? 0:padding),
+                       gu::GpuData<4, float>(w_dummy),
+                       gu::GpuData<1, float>(b_dummy),
+                       zero_padding);
+
+  // no activation
 
   printf("Loaded\n");
 
