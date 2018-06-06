@@ -81,7 +81,7 @@ def process_class(classname, smoothing):
     plt.ylim(0, 0.35)
     plt.title(classname)
 
-smoothing = 0.04
+smoothing = 0.07
 
 plt.subplot(2, 2, 1)
 process_class('Car', smoothing)
