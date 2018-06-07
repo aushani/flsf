@@ -47,7 +47,7 @@ dirnames = [
 def load(fn):
     return np.loadtxt(fn)
 
-def process_class(classname, smoothing):
+def get_errors(classname, smoothing):
     errs = None
     for d in dirnames:
         fn  = '%s/%s/%s.csv' % (d, smoothing, classname)
@@ -61,8 +61,34 @@ def process_class(classname, smoothing):
         else:
             errs = np.append(errs, res)
 
-    if errs is None:
-        return
+    return errs
+
+def process_labeled_tracklets(smoothing):
+    classes = ['Car', 'Cyclist', 'Misc', 'Pedestrian', 'Tram', 'Truck', 'Van', 'Person (sitting)']
+
+    errs = []
+
+    for object_class in classes:
+        errs = np.append(errs, get_errors(object_class, smoothing))
+
+    print 'All Tracklets'
+    print '\tCount: ', len(errs)
+
+    n_30 = np.sum(errs < 0.3) + 0.0
+    print '\tWithin 30 cm', n_30 / len(errs)
+
+    print '\tMean', np.mean(errs)
+
+    plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
+    plt.plot([0.3, 0.3], [0, 0.35], 'k-')
+    plt.grid()
+    plt.xlim(0, 1)
+    plt.ylim(0, 0.35)
+    plt.title('All Labeled Tracklets')
+
+
+def process_class(classname, smoothing):
+    errs = get_errors(classname, smoothing)
 
     print ''
     print classname
@@ -72,7 +98,6 @@ def process_class(classname, smoothing):
     print '\tWithin 30 cm', n_30 / len(errs)
 
     print '\tMean', np.mean(errs)
-    print '\tMedian', np.median(errs)
 
     plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
     plt.plot([0.3, 0.3], [0, 0.35], 'k-')
@@ -84,10 +109,10 @@ def process_class(classname, smoothing):
 smoothing = 0.07
 
 plt.subplot(2, 2, 1)
-process_class('Car', smoothing)
+process_labeled_tracklets(smoothing)
 
 plt.subplot(2, 2, 2)
-process_class('NoObject', smoothing)
+process_class('Car', smoothing)
 
 plt.subplot(2, 2, 3)
 process_class('Cyclist', smoothing)
