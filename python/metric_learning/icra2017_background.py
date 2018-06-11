@@ -42,7 +42,26 @@ class Icra2017Background:
         assert self.score.shape[1] == self.full_output_width
         assert self.score.shape[2] == self.full_output_length
 
-        cost = tf.reduce_mean(tf.log(1 + tf.exp(-self.filter * self.score)))
+        # Filter weighting
+        num_neg = 12119773.0
+        num_pos = 336639.0
+        denom = 1.0 / num_neg + 1.0 / num_pos
+        self.neg_weight = (1.0 / num_neg) / denom
+        self.pos_weight = (1.0 / num_pos) / denom
+
+        cost = tf.log(1 + tf.exp(-self.filter * self.score))
+
+        neg_loss = self.neg_weight * cost
+        pos_loss = self.pos_weight * cost
+
+        is_background = self.filter < 0
+        is_foreground = self.filter > 0
+
+        neg_filter_loss = tf.where(is_background, neg_loss, tf.zeros_like(neg_loss))
+        pos_filter_loss = tf.where(is_foreground, pos_loss, tf.zeros_like(pos_loss))
+        weighted_filter_loss = neg_filter_loss + pos_filter_loss
+
+        cost = tf.reduce_mean(weighted_filter_loss)
         self.loss = cost
 
         self.opt = tf.train.FtrlOptimizer(0.01)
