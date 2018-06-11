@@ -1,6 +1,6 @@
 import tensorflow as tf
 from filter_data import *
-from old_filter_data import *
+from old_filter_sample import *
 from old_filter_batch_manager import *
 import time
 import matplotlib.pyplot as plt
