@@ -31,8 +31,6 @@ struct DeviceData {
    distance(167, 167, 31, 31),                            // XXX magic numbers
    p_background1(167, 167),                               // XXX magic numbers
    p_background2(167, 167),                               // XXX magic numbers
-   occ_mask1(167, 167),                                   // XXX magic numbers
-   occ_mask2(167, 167),                                   // XXX magic numbers
    filter_map1(167, 167, res),                            // XXX magic numbers
    filter_map2(167, 167, res),                            // XXX magic numbers
    distance_map(167, 167, 31, res) {                      // XXX magic numbers
@@ -55,9 +53,6 @@ struct DeviceData {
 
   gu::GpuData<2, float>                     p_background1;
   gu::GpuData<2, float>                     p_background2;
-
-  gu::GpuData<2, int>                       occ_mask1;
-  gu::GpuData<2, int>                       occ_mask2;
 
   boost::optional<FlowImage>                flow_image;
   //ClassificationMap                         classification_map;
@@ -103,7 +98,7 @@ void FlowProcessor::Initialize(const kt::VelodyneScan &scan) {
   data_->last_og2 = og;
 
   data_->network.SetInput(og);
-  data_->network.Apply(&data_->last_encoding2, &data_->p_background2, &data_->occ_mask2);
+  data_->network.Apply(&data_->last_encoding2, &data_->p_background2);
 }
 
 void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
@@ -114,9 +109,6 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
 
   gu::GpuData<2, float> prev_p_background = data_->p_background2;
   gu::GpuData<2, float> p_background      = data_->p_background1;
-
-  gu::GpuData<2, int>   prev_occ_mask     = data_->occ_mask2;
-  gu::GpuData<2, int>   occ_mask          = data_->occ_mask1;
 
   // Get occ grid
   t.Start();
@@ -129,7 +121,7 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
   printf("Took %5.3f ms to set occ grid input to network\n", t.GetMs());
 
   t.Start();
-  data_->network.Apply(&encoding, &p_background, &occ_mask);
+  data_->network.Apply(&encoding, &p_background);
   printf("Took %5.3f ms to apply network\n", t.GetMs());
 
   // Get distance
@@ -137,7 +129,7 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
 
   // Compute flow
   data_->flow_image = data_->solver.ComputeFlow(data_->distance, prev_p_background,
-                                                prev_occ_mask, data_->resolution, iterations_);
+                                                data_->resolution, iterations_);
 
   // Update cached state ////////////
   t.Start();
@@ -154,11 +146,6 @@ void FlowProcessor::Update(const kt::VelodyneScan &scan, bool copy_data) {
   data_->p_background1 = prev_p_background;
   data_->p_background2 = p_background;
 
-  // Swap
-  data_->occ_mask1 = prev_occ_mask;
-  data_->occ_mask2 = occ_mask;
-  printf("Took %5.3f ms to update cached state\n", t.GetMs());
-
   // Copy to host
   if (copy_data) {
     t.Start();
@@ -174,7 +161,7 @@ void FlowProcessor::Refresh() {
 
   // Compute flow
   auto fi = data_->solver.ComputeFlow(data_->distance, data_->p_background1,
-                                      data_->occ_mask1, data_->resolution, iterations_);
+                                      data_->resolution, iterations_);
 
   data_->flow_image = fi;
 

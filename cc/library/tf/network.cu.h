@@ -25,8 +25,7 @@ class Network {
 
   void SetInput(const rt::OccGrid &og);
 
-  void Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background,
-      gu::GpuData<2, int> *occ_mask);
+  void Apply(gu::GpuData<3, float> *encoding, gu::GpuData<2, float> *p_background);
 
   int GetEncodingDim() const;
 
@@ -45,7 +44,6 @@ class Network {
   static std::vector<int> LoadDimFile(const fs::path &path);
 
   void ComputeFilterProbability(gu::GpuData<2, float> *p_background);
-  void ComputeOccMask(gu::GpuData<2, int> *occ_mask);
 };
 
 } // namespace tf

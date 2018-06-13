@@ -23,7 +23,6 @@ void Solver::SetSmoothing(float val) {
 
 __global__ void Expectation(const gu::GpuData<4, float> dist,
                             const gu::GpuData<2, float> p_background,
-                            const gu::GpuData<2, int> occ_mask,
                             gu::GpuData<3, int> flow_est,
                             gu::GpuData<2, int> flow_valid,
                             gu::GpuData<2, float> energy,
@@ -48,7 +47,7 @@ __global__ void Expectation(const gu::GpuData<4, float> dist,
     return;
   }
 
-  if (p_background(i_from, j_from) > 0.5 || occ_mask(i_from, j_from) == 0) {
+  if (p_background(i_from, j_from) > 0.5) {
     flow_est(i_from, j_from, 0) = 0;
     flow_est(i_from, j_from, 1) = 0;
 
@@ -259,7 +258,6 @@ __global__ void Maximization(const gu::GpuData<2, float> energy,
 
 FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
                               const gu::GpuData<2, float> &p_background,
-                              const gu::GpuData<2, int> &occ_mask,
                               float resolution,
                               int iters) {
   library::timer::Timer timer;
@@ -269,9 +267,6 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
 
   BOOST_ASSERT(p_background.GetDim(0) == nx_);
   BOOST_ASSERT(p_background.GetDim(1) == ny_);
-
-  BOOST_ASSERT(occ_mask.GetDim(0) == nx_);
-  BOOST_ASSERT(occ_mask.GetDim(1) == ny_);
 
   // Setup thread and block dims
   dim3 threads;
@@ -294,7 +289,7 @@ FlowImage Solver::ComputeFlow(const gu::GpuData<4, float> &dist,
   for (int iter = 0; iter<iters; iter++) {
 
     t.Start();
-    Expectation<<<blocks, threads>>>(dist, p_background, occ_mask, flow_est_, flow_valid_,
+    Expectation<<<blocks, threads>>>(dist, p_background, flow_est_, flow_valid_,
         energy_, energy_hat_, energy_hat_valid_, n_window_, iter == 0 ? -1.0:w_p);
     cudaError_t err = cudaDeviceSynchronize();
     BOOST_ASSERT(err == cudaSuccess);
