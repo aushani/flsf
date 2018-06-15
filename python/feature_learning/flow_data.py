@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class FlowDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning_v3/', shuffle=True, evaluation=False):
+    def __init__(self, path, shuffle=True, evaluation=False):
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/matches.bin' % (path),
             '%s/2011_09_26_drive_0002_sync/matches.bin' % (path),

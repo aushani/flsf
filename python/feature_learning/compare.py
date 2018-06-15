@@ -18,8 +18,8 @@ def make_constancy_plots():
     fl_match = np.loadtxt('fl_match.csv')
     fl_score = np.loadtxt('fl_score.csv')
 
-    il_match = np.loadtxt('il_match.csv')
-    il_score = np.loadtxt('il_score.csv')
+    il_match = np.loadtxt('oc_match.csv')
+    il_score = np.loadtxt('oc_score.csv')
 
     plt.clf()
     fig = plt.gcf()
@@ -32,25 +32,6 @@ def make_constancy_plots():
 
     plt.savefig('pr_curve_constancy.png')
 
-def make_filter_plots():
-    fl_filter = np.loadtxt('fl_filter.csv')
-    fl_prob   = np.loadtxt('fl_filter_prob.csv')
-
-    ib_filter = np.loadtxt('ib_filter.csv')
-    ib_score  = np.loadtxt('ib_filter_score.csv')
-
-    plt.clf()
-    fig = plt.gcf()
-    fig.set_size_inches(8, 6)
-
-    make_pr_curve(ib_filter, ib_score, 'Ushani et. al 2017')
-    make_pr_curve(fl_filter, fl_prob,  'Proposed')
-
-    plt.title('Precision-Recall for Background Filter')
-
-    plt.savefig('pr_curve_filter.png')
-
 plt.switch_backend('agg')
 
 make_constancy_plots()
-#make_filter_plots()

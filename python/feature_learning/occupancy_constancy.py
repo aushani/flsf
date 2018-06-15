@@ -1,81 +1,44 @@
 import tensorflow as tf
-from filter_data import *
-from old_filter_sample import *
-from old_filter_batch_manager import *
+from flow_data import *
+from old_flow_sample import *
+from old_batch_manager import *
 import time
 import matplotlib.pyplot as plt
 import sklearn.metrics
 import sys
 
-class Icra2017Background:
+class OccupancyConstancy:
 
-    def __init__(self, filter_data=None, exp_name='old_background'):
+    def __init__(self, flow_data=None, exp_name='old_const'):
         self.exp_name = exp_name
 
-        self.full_input_width  = 167 + 24
-        self.full_input_length = 167 + 24
-        self.full_output_width  = 167
-        self.full_output_length = 167
-        self.full_height = 13
-
-        if filter_data:
-            self.validation_set = OldFilterSampleSet(filter_data.validation_set)
-            self.batches = OldFilterBatchManager(filter_data)
+        if flow_data:
+            self.validation_set = OldFlowSampleSet(flow_data.validation_set)
+            self.batches = OldBatchManager(flow_data)
 
         self.height = 13
 
         # Inputs
-        self.fv = tf.placeholder(tf.float32, shape=[None, self.full_input_width, self.full_input_length, 2*self.height])
+        self.fv    = tf.placeholder(tf.float32, shape=[None, 3*self.height])
 
         # Output
-        self.filter = tf.placeholder(tf.float32, shape=[None, self.full_output_width, self.full_output_length], name='true_label')
+        self.match       = tf.placeholder(tf.float32, shape=[None,])
+        y_ = 2*self.match - 1
 
-        self.score = tf.contrib.layers.conv2d(self.fv, num_outputs = 1, kernel_size = 5, activation_fn = None, padding = 'VALID')
+        # Train LR
+        w = tf.Variable(tf.zeros([1, 3*self.height]))
+        b = tf.Variable(tf.zeros([1]))
 
-        print self.score.shape
-        i0 = 10
-        i1 = self.score.shape[1] - 10
-
-        self.score = self.score[:, i0:i1, i0:i1, 0]
-        print self.score.shape
-
-        assert self.score.shape[1] == self.full_output_width
-        assert self.score.shape[2] == self.full_output_length
-
-        # Filter weighting
-        num_neg = 12119773.0
-        num_pos = 336639.0
-        denom = 1.0 / num_neg + 1.0 / num_pos
-        self.neg_weight = (1.0 / num_neg) / denom
-        self.pos_weight = (1.0 / num_pos) / denom
-
-        cost = tf.log(1 + tf.exp(-self.filter * self.score))
-
-        neg_loss = self.neg_weight * cost
-        pos_loss = self.pos_weight * cost
-
-        is_background = self.filter < 0
-        is_foreground = self.filter > 0
-
-        neg_filter_loss = tf.where(is_background, neg_loss, tf.zeros_like(neg_loss))
-        pos_filter_loss = tf.where(is_foreground, pos_loss, tf.zeros_like(pos_loss))
-        weighted_filter_loss = neg_filter_loss + pos_filter_loss
-
-        cost = tf.reduce_sum(weighted_filter_loss)
+        self.score = tf.matmul(w, self.fv, transpose_b = True) + b
+        cost = tf.reduce_mean(tf.log(1 + tf.exp(-y_ * self.score)))
         self.loss = cost
 
         self.opt = tf.train.FtrlOptimizer(0.01)
         self.train_step = self.opt.minimize(self.loss)
 
         y = tf.sign(self.score)
-        valid_prediction = tf.not_equal(self.filter, 0)
-        correct_prediction = tf.equal(y, tf.sign(self.filter))
-        correct_prediction = correct_prediction & valid_prediction
-
-        self.valid_prediction = tf.cast(valid_prediction, tf.float32)
-        self.correct_prediction = tf.cast(correct_prediction, tf.float32)
-
-        self.accuracy = tf.reduce_sum(self.correct_prediction) / tf.reduce_sum(self.valid_prediction)
+        correct_prediction = tf.equal(y, tf.sign(y_))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
         # Optimizer
         self.opt = tf.train.AdamOptimizer(1e-6)
@@ -108,14 +71,14 @@ class Icra2017Background:
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
 
         fd_valid = {
-                        self.fv     :   self.validation_set.feature_vector,
-                        self.filter :   self.validation_set.filter,
+                        self.fv :      self.validation_set.feature_vector,
+                        self.match :   self.validation_set.match,
                    }
 
         iteration = start_iter + 1
 
-        it_save = 1000
-        it_plot = 1000
+        it_save = 100000
+        it_plot = 100000
         it_summ = 100
 
         t_sum = 0
@@ -145,12 +108,9 @@ class Icra2017Background:
                 print 'Iteration %d' % (iteration)
 
                 self.make_plots(save='%s/res_%010d.png' % (self.exp_name, iteration / it_plot))
+                #self.make_match_plot(valid_set, save='%s/metric_%010d.png' % iteration)
 
-                corr, valid, acc = self.sess.run([self.correct_prediction, self.valid_prediction, self.accuracy],
-                                                 feed_dict = fd_valid)
-
-                #print ' %f / %f ' % (np.sum(corr), np.sum(valid))
-                print '  Filter accuracy = %5.3f %%' % (100.0 * acc)
+                print '  Match accuracy = %5.3f %%' % (100.0 * self.accuracy.eval(session = self.sess, feed_dict = fd_valid))
 
                 if iteration > 0:
                     print '  Loading data at %5.3f ms / iteration' % (t_data*1000.0/iteration)
@@ -167,7 +127,7 @@ class Icra2017Background:
             tic = time.time()
             fd = {
                    self.fv:     samples.feature_vector,
-                   self.filter: samples.filter,
+                   self.match:  samples.match,
                  }
             self.train_step.run(session = self.sess, feed_dict = fd)
             toc = time.time()
@@ -187,27 +147,52 @@ class Icra2017Background:
         # Get data
 
         scores = self.eval_scores(self.validation_set.feature_vector)
-        labels = np.copy(self.validation_set.filter)
 
-        scores = scores[:]
-        labels = labels[:]
+        is_background = self.validation_set.foreground == 0
+        is_foreground = self.validation_set.foreground == 1
 
-        is_background = labels < 0
-        is_foreground = labels > 0
-        is_invalid    = labels ==  0
-        is_valid      = ~is_invalid
-
-        labels[is_background] = 0
-        labels[is_foreground] = 1 #redundant
-
-        scores = scores[is_valid]
-        labels = labels[is_valid]
+        match = self.validation_set.match
 
         plt.clf()
         fig = plt.gcf()
         fig.set_size_inches(20, 20)
 
-        self.make_pr_curve(labels, scores, 'Background Filter')
+        plt.subplot(3, 2, 1)
+        #self.make_pr_curve(match[is_background], scores[is_background], 'Background')
+        #self.make_pr_curve(match[is_foreground], scores[is_foreground], 'Foreground')
+        self.make_pr_curve(match, scores, 'All')
+
+        for i, cumul in enumerate([False, True]):
+            if i == 0:
+                plot_type = 'Histogram'
+            if i == 1:
+                plot_type = 'CDF'
+
+            plt.subplot(3, 2, 3 + 2*i)
+            plt.title('Occupancy Constancy %s' % plot_type)
+            idx_match = match == 1
+            idx_nonmatch = match == 0
+
+            plt.hist(scores[idx_match], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(scores[idx_nonmatch], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Score')
+
+            plt.subplot(3, 2, 4 + 2*i)
+            plt.title('Occupancy Constancy %s (Foreground only)' % plot_type)
+            idx_match = (match == 1) & (is_foreground)
+            idx_nonmatch = (match == 0) & (is_foreground)
+
+            plt.hist(scores[idx_match], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Matching (%d)' % np.sum(idx_match))
+            plt.hist(scores[idx_nonmatch], bins=100, range=(-1.0, 1.0), cumulative=cumul,
+                    normed=cumul, histtype='step', label='Non-Matching (%d)' % np.sum(idx_nonmatch))
+            plt.legend(loc='upper right')
+            plt.grid()
+            plt.xlabel('Distance')
 
         if save:
             plt.savefig(save)
@@ -233,16 +218,18 @@ class Icra2017Background:
 if __name__ == '__main__':
     plt.switch_backend('agg')
 
-    filter_dm = FilterDataManager()
-    filter_dm.make_validation(50)
+    data_path = sys.argv[1]
 
-    ib = Icra2017Background(filter_dm)
+    flow_dm = FlowDataManager(path=data_path)
+    flow_dm.make_validation(10000)
 
-    if len(sys.argv) > 1:
-        load_iter = int(sys.argv[1])
+    oc = OccupancyConstancy(flow_dm)
+
+    if len(sys.argv) > 2:
+        load_iter = int(sys.argv[2])
         print 'Loading from iteration %d' % (load_iter)
 
-        ib.restore('model.ckpt-%d' % (load_iter))
-        ib.train(start_iter = load_iter+1)
+        oc.restore('model.ckpt-%d' % (load_iter))
+        oc.train(start_iter = load_iter+1)
     else:
-        ib.train()
+        oc.train()

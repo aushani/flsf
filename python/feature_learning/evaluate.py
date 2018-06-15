@@ -1,8 +1,7 @@
-from icra2017_learning import *
-from icra2017_background import *
+from occupancy_constancy import *
 from feature_learning import *
 
-def evaluate_matches(model_file, n=5000, il=False, fl=False):
+def evaluate_matches(model_file, n=5000, oc=False, fl=False):
     np.random.seed(0)
 
     flow_dm = FlowDataManager(evaluation=False)
@@ -14,11 +13,11 @@ def evaluate_matches(model_file, n=5000, il=False, fl=False):
     match = old_ss.match == 1
     is_foreground = old_ss.foreground == 1
 
-    if il:
-        print 'Loading icra 2017', model_file
-        il = Icra2017Learning()
-        il.restore(model_file)
-        scores = il.eval_scores(old_ss.feature_vector)
+    if ol:
+        print 'Loading occupancy constancy', model_file
+        ol = OccupancyConstancy()
+        ol.restore(model_file)
+        scores = ol.eval_scores(old_ss.feature_vector)
 
         return match[is_foreground], scores[is_foreground]
 
@@ -29,32 +28,3 @@ def evaluate_matches(model_file, n=5000, il=False, fl=False):
         dists = fl.eval_dist(ss.occ1, ss.occ2)
 
         return match[is_foreground], -dists[is_foreground]
-
-def evaluate_filter(model_file, n=100, ib=False, fl=False):
-    np.random.seed(0)
-
-    filter_dm = FilterDataManager(evaluation=False)
-    filter_dm.make_validation(n)
-
-    ss = filter_dm.validation_set
-    old_ss = OldFilterSampleSet(ss)
-
-    filter_res = ss.filter
-    is_valid = filter_res >= 0
-
-    if ib:
-        print 'Loading icra 2017', model_file
-        ib = Icra2017Background()
-        ib.restore(model_file)
-        scores = ib.eval_scores(old_ss.feature_vector)
-
-        return filter_res[is_valid], scores[is_valid]
-
-    if fl:
-        print 'Loading metric learning', model_file
-        fl = FeatureLearning()
-        fl.restore(model_file)
-        prob = fl.eval_filter_prob(ss.occ)
-        prob = prob[:, :, :, 1]
-
-        return filter_res[is_valid], prob[is_valid]

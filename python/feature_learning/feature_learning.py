@@ -553,16 +553,18 @@ class FeatureLearning:
 if __name__ == '__main__':
     plt.switch_backend('agg')
 
-    filter_dm = FilterDataManager()
-    flow_dm = FlowDataManager()
+    data_path = sys.argv[1]
+
+    filter_dm = FilterDataManager(path=data_path)
+    flow_dm = FlowDataManager(path=data_path)
 
     filter_dm.make_validation(50)
     flow_dm.make_validation(1000)
 
     fl = FeatureLearning(filter_dm, flow_dm)
 
-    if len(sys.argv) > 1:
-        load_iter = int(sys.argv[1])
+    if len(sys.argv) > 2:
+        load_iter = int(sys.argv[2])
         print 'Loading from iteration %d' % (load_iter)
 
         fl.restore('model.ckpt-%d' % (load_iter))

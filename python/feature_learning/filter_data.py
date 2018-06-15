@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class FilterDataManager:
 
-    def __init__(self, path='/home/aushani/data/full_learning_v3/', shuffle=True, evaluation=False):
+    def __init__(self, path, shuffle=True, evaluation=False):
         # only use first 10 for training
         self.filenames = [
             '%s/2011_09_26_drive_0001_sync/filter.bin' % (path),
