@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   au->setCommandLineUsage( args.getApplicationName() + " [options]");
   au->setDescription(args.getApplicationName() + " viewer");
 
-  au->addCommandLineOption("--network-data-dir <dirname>", "Network data directory", "~/tsf++/data/network/");
+  au->addCommandLineOption("--network-data-dir <dirname>", "Network data directory", "~/flsf/data/network/");
   au->addCommandLineOption("--tsf-data-dir <dirname>", "TSF data directory", "~/data/tsf_data/");
   au->addCommandLineOption("--kitti-log-date <dirname>", "KITTI date", "2011_09_26");
   au->addCommandLineOption("--log-num <num>", "KITTI log number", "18");
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
   // Read params
   std::string home_dir = getenv("HOME");
 
-  std::string network_data_dir = home_dir + "/tsf++/data/network/";
+  std::string network_data_dir = home_dir + "/flsf/data/network/";
   if (!args.read("--network-data-dir", network_data_dir)) {
     printf("Using default network data dir: %s\n", network_data_dir.c_str());
   }

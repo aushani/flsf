@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 
   std::string home_dir = getenv("HOME");
 
-  std::string network_data_dir = home_dir + "/tsf++/data/network";
+  std::string network_data_dir = home_dir + "/flsf/data/network";
   if (vm.count("network-data-dir")) {
     network_data_dir = vm["network-data-dir"].as<std::string>();
   } else {
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   }
 
   std::string tsf_data_dir = home_dir + "/data/tsf_data";
-  if (vm.count("network-data-dir")) {
+  if (vm.count("tsf-data-dir")) {
     tsf_data_dir = vm["network-data-dir"].as<std::string>();
   } else {
     printf("Using default tsf data dir: %s\n", tsf_data_dir.c_str());
