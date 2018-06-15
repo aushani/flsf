@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-path = '/home/aushani/data/eval_tsf++/model.ckpt-2616000'
+path = '/home/aushani/data/eval_tsf++/'
 dirnames = [
     #'%s/2011_09_26_drive_0001_sync' % (path),
     #'%s/2011_09_26_drive_0002_sync' % (path),
@@ -47,10 +47,33 @@ dirnames = [
 def load(fn):
     return np.loadtxt(fn)
 
-def get_errors(classname, smoothing):
+def get_runtimes(path):
+    fn = path + "/out.txt"
+    out_file = open(fn, 'r')
+
+    times = []
+
+    for line in out_file:
+        if "to compute flow" in line:
+            time_str = line.replace('Took ', '').replace(' ms to compute flow', '')
+            time = float(time_str)
+
+            times.append(time)
+
+    return time
+
+def get_average_runtime(dirnames):
+    times = []
+
+    for dirname in dirnames:
+        times.append(get_runtimes(dirname))
+
+    print 'Average runtime: %7.5f ms' % (np.mean(times))
+
+def get_errors(classname):
     errs = None
     for d in dirnames:
-        fn  = '%s/%s/%s.csv' % (d, smoothing, classname)
+        fn  = '%s/%s.csv' % (d, classname)
         if not os.path.isfile(fn):
             continue
 
@@ -63,14 +86,15 @@ def get_errors(classname, smoothing):
 
     return errs
 
-def process_labeled_tracklets(smoothing):
+def process_labeled_tracklets():
     classes = ['Car', 'Cyclist', 'Misc', 'Pedestrian', 'Tram', 'Truck', 'Van', 'Person (sitting)']
 
     errs = []
 
     for object_class in classes:
-        errs = np.append(errs, get_errors(object_class, smoothing))
+        errs = np.append(errs, get_errors(object_class))
 
+    print ''
     print 'All Tracklets'
     print '\tCount: ', len(errs)
 
@@ -79,16 +103,15 @@ def process_labeled_tracklets(smoothing):
 
     print '\tMean', np.mean(errs)
 
-    plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
-    plt.plot([0.3, 0.3], [0, 0.35], 'k-')
-    plt.grid()
-    plt.xlim(0, 1)
-    plt.ylim(0, 0.35)
-    plt.title('All Labeled Tracklets')
+    #plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
+    #plt.plot([0.3, 0.3], [0, 0.35], 'k-')
+    #plt.grid()
+    #plt.xlim(0, 1)
+    #plt.ylim(0, 0.35)
+    #plt.title('All Labeled Tracklets')
 
-
-def process_class(classname, smoothing):
-    errs = get_errors(classname, smoothing)
+def process_class(classname):
+    errs = get_errors(classname)
 
     print ''
     print classname
@@ -99,25 +122,25 @@ def process_class(classname, smoothing):
 
     print '\tMean', np.mean(errs)
 
-    plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
-    plt.plot([0.3, 0.3], [0, 0.35], 'k-')
-    plt.grid()
-    plt.xlim(0, 1)
-    plt.ylim(0, 0.35)
-    plt.title(classname)
+    #plt.hist(errs, weights=(1.0/len(errs),)*len(errs), range=(0, 1.0), bins=20)
+    #plt.plot([0.3, 0.3], [0, 0.35], 'k-')
+    #plt.grid()
+    #plt.xlim(0, 1)
+    #plt.ylim(0, 0.35)
+    #plt.title(classname)
 
-smoothing = 0.07
+get_average_runtime(dirnames)
 
-plt.subplot(2, 2, 1)
-process_labeled_tracklets(smoothing)
+#plt.subplot(2, 2, 1)
+process_labeled_tracklets()
 
-plt.subplot(2, 2, 2)
-process_class('Car', smoothing)
+#plt.subplot(2, 2, 2)
+process_class('Car')
 
-plt.subplot(2, 2, 3)
-process_class('Cyclist', smoothing)
+#plt.subplot(2, 2, 3)
+process_class('Cyclist')
 
-plt.subplot(2, 2, 4)
-process_class('Pedestrian', smoothing)
+#plt.subplot(2, 2, 4)
+process_class('Pedestrian')
 
-plt.show()
+#plt.show()
