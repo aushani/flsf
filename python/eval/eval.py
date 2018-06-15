@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
+import sys
 
-path = '/home/aushani/data/eval_tsf++/'
+path = sys.argv[1]
 dirnames = [
     #'%s/2011_09_26_drive_0001_sync' % (path),
     #'%s/2011_09_26_drive_0002_sync' % (path),
