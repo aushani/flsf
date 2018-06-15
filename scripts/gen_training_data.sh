@@ -1,7 +1,7 @@
-BIN="~/flsf/cc/bazel-bin/app/data/extract-samples"
-TSF_DIR="~/data/tsf_data/kittidata/2011_09_26/"
+BIN="$HOME/flsf/cc/bazel-bin/app/data/extract-samples"
+TSF_DIR="$HOME/data/tsf_data/kittidata/2011_09_26/"
 
-SAVE_DIR="~/data/full_learning_v3/"
+SAVE_DIR="$HOME/data/feature_learning/"
 
 # Copy bin to tmp
 TMP_BIN="/tmp/flow_data"
