@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
   au->setCommandLineUsage( args.getApplicationName() + " [options]");
   au->setDescription(args.getApplicationName() + " viewer");
 
+  au->addCommandLineOption("--network-data-dir <dirname>", "Network data directory", "~/tsf++/data/network/");
   au->addCommandLineOption("--tsf-data-dir <dirname>", "TSF data directory", "~/data/tsf_data/");
   au->addCommandLineOption("--kitti-log-date <dirname>", "KITTI date", "2011_09_26");
   au->addCommandLineOption("--log-num <num>", "KITTI log number", "18");
@@ -38,6 +39,12 @@ int main(int argc, char** argv) {
 
   // Read params
   std::string home_dir = getenv("HOME");
+
+  std::string network_data_dir = home_dir + "/tsf++/data/network/";
+  if (!args.read("--network-data-dir", network_data_dir)) {
+    printf("Using default network data dir: %s\n", network_data_dir.c_str());
+  }
+
   std::string tsf_data_dir = home_dir + "/data/tsf_data";
   if (!args.read("--tsf-data-dir", tsf_data_dir)) {
     printf("Using default tsf data dir: %s\n", tsf_data_dir.c_str());
@@ -58,7 +65,7 @@ int main(int argc, char** argv) {
     printf("Starting from frame %d\n", frame_num);
   }
 
-  auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, log_num, frame_num);
+  auto app = std::make_shared<app::flow::App>(fs::path(tsf_data_dir), kitti_log_date, network_data_dir, log_num, frame_num);
   auto viewer = std::make_shared<vw::Viewer>(&args);
 
   osg::ref_ptr<app::flow::KeyHandler>   key_handler(new app::flow::KeyHandler(app));

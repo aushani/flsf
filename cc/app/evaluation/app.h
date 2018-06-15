@@ -17,7 +17,7 @@ namespace evaluation {
 
 class App {
  public:
-  App(const fs::path &tsf_dir, const std::string &date, int log_num);
+  App(const fs::path &tsf_dir, const std::string &date, const fs::path &network_dir, int log_num);
 
   void Run(const fs::path &save_path);
 

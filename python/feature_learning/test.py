@@ -1,4 +1,4 @@
-from metric_learning import *
+from feature_learning import *
 from filter_data import *
 import matplotlib.pyplot as plt
 import sys
@@ -13,14 +13,14 @@ model_file = sys.argv[1]
 filter_data = FilterDataManager(shuffle=False)
 flow_data = FlowDataManager(shuffle=False)
 
-ml = MetricLearning()
-ml.restore(model_file)
+fl = FeatureLearning()
+fl.restore(model_file)
 
 while True:
     sample = filter_data.get_next_sample(augment = False)
 
     tic = time.time()
-    probs = ml.eval_filter_prob(sample.occ)
+    probs = fl.eval_filter_prob(sample.occ)
     toc = time.time()
     t_ms = (toc - tic) * 1e3
 

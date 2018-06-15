@@ -30,7 +30,7 @@ namespace flow {
 
 class App {
  public:
-  App(const fs::path &tsf_dir, const std::string &date, int log_num, int frame_num=0);
+  App(const fs::path &tsf_dir, const std::string &date, const fs::path &network_path, int log_num, int frame_num=0);
 
   App(const App &app);
   ~App();

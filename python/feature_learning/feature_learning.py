@@ -6,7 +6,7 @@ import time
 import sys
 import sklearn
 
-class MetricLearning:
+class FeatureLearning:
 
     def __init__(self, filter_data=None, flow_data=None, exp_name="exp"):
         self.exp_name = exp_name
@@ -156,19 +156,19 @@ class MetricLearning:
         self.normalized_filter_loss = total_filter_loss / num_valid
 
         # Filter accuracy
-        ml_filter = tf.argmax(self.pred_filter, 3)
-        correct_filter = tf.equal(self.filter, tf.cast(ml_filter, tf.int32))
+        fl_filter = tf.argmax(self.pred_filter, 3)
+        correct_filter = tf.equal(self.filter, tf.cast(fl_filter, tf.int32))
 
         num_correct = tf.reduce_sum(tf.cast(correct_filter, tf.float32))
 
         self.filter_accuracy = num_correct / num_valid
 
-        correct_background = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 0), is_background)
+        correct_background = tf.logical_and(tf.equal(tf.cast(fl_filter, tf.int32), 0), is_background)
         num_background = tf.reduce_sum(tf.cast(is_background, tf.float32))
         num_background_correct = tf.reduce_sum(tf.cast(correct_background, tf.float32))
         self.bg_accuracy = num_background_correct / num_background
 
-        correct_foreground = tf.logical_and(tf.equal(tf.cast(ml_filter, tf.int32), 1), is_foreground)
+        correct_foreground = tf.logical_and(tf.equal(tf.cast(fl_filter, tf.int32), 1), is_foreground)
         num_foreground = tf.reduce_sum(tf.cast(is_foreground, tf.float32))
         num_foreground_correct = tf.reduce_sum(tf.cast(correct_foreground, tf.float32))
         self.fg_accuracy = num_foreground_correct / num_foreground
@@ -559,13 +559,13 @@ if __name__ == '__main__':
     filter_dm.make_validation(50)
     flow_dm.make_validation(1000)
 
-    ml = MetricLearning(filter_dm, flow_dm)
+    fl = FeatureLearning(filter_dm, flow_dm)
 
     if len(sys.argv) > 1:
         load_iter = int(sys.argv[1])
         print 'Loading from iteration %d' % (load_iter)
 
-        ml.restore('model.ckpt-%d' % (load_iter))
-        ml.train(start_iter = load_iter+1)
+        fl.restore('model.ckpt-%d' % (load_iter))
+        fl.train(start_iter = load_iter+1)
     else:
-        ml.train()
+        fl.train()

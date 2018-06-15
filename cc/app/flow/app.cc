@@ -11,10 +11,10 @@
 namespace app {
 namespace flow {
 
-App::App(const fs::path &tsf_dir, const std::string &date, int log_num, int frame_num) :
+App::App(const fs::path &tsf_dir, const std::string &date, const fs::path &network_path, int log_num, int frame_num) :
  camera_cal_(tsf_dir / "kittidata" / date),
  scan_at_(frame_num),
- flow_processor_("/home/aushani/koopa_training/"),
+ flow_processor_(network_path),
  node_manager_(tsf_dir / "osg_models" / "lexus" / "lexus_hs.obj") {
   // Load data
   LoadVelodyneData(tsf_dir, date, log_num);

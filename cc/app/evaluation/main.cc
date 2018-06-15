@@ -14,6 +14,7 @@ int main(int argc, char** argv) {
 
   po::options_description desc("Allowed options");
   desc.add_options()
+    ("network-data-dir", po::value<std::string>(), "Network Data Directory")
     ("tsf-data-dir", po::value<std::string>(), "TSF Data Directory")
     ("kitti-log-date", po::value<std::string>(), "KITTI data")
     ("log-num,l", po::value<int>(), "KITTI Log Number")
@@ -27,9 +28,17 @@ int main(int argc, char** argv) {
   po::notify(vm);
 
   std::string home_dir = getenv("HOME");
+
+  std::string network_data_dir = home_dir + "/tsf++/data/network";
+  if (vm.count("network-data-dir")) {
+    network_data_dir = vm["network-data-dir"].as<std::string>();
+  } else {
+    printf("Using default network data dir: %s\n", network_data_dir.c_str());
+  }
+
   std::string tsf_data_dir = home_dir + "/data/tsf_data";
-  if (vm.count("tsf-data-dir")) {
-    tsf_data_dir = vm["tsf-data-dir"].as<std::string>();
+  if (vm.count("network-data-dir")) {
+    tsf_data_dir = vm["network-data-dir"].as<std::string>();
   } else {
     printf("Using default tsf data dir: %s\n", tsf_data_dir.c_str());
   }
@@ -75,7 +84,7 @@ int main(int argc, char** argv) {
   }
 
   printf("Running evaluation\n");
-  app::evaluation::App eval(fs::path(tsf_data_dir), kitti_log_date, log_num);
+  app::evaluation::App eval(fs::path(tsf_data_dir), kitti_log_date, network_data_dir, log_num);
 
   if (smoothing > 0) {
     printf("Setting smoothing parameter to %f\n", smoothing);

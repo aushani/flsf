@@ -1,8 +1,8 @@
 from icra2017_learning import *
 from icra2017_background import *
-from metric_learning import *
+from feature_learning import *
 
-def evaluate_matches(model_file, n=5000, il=False, ml=False):
+def evaluate_matches(model_file, n=5000, il=False, fl=False):
     np.random.seed(0)
 
     flow_dm = FlowDataManager(evaluation=False)
@@ -22,15 +22,15 @@ def evaluate_matches(model_file, n=5000, il=False, ml=False):
 
         return match[is_foreground], scores[is_foreground]
 
-    if ml:
+    if fl:
         print 'Loading metric learning', model_file
-        ml = MetricLearning()
-        ml.restore(model_file)
-        dists = ml.eval_dist(ss.occ1, ss.occ2)
+        fl = FeatureLearning()
+        fl.restore(model_file)
+        dists = fl.eval_dist(ss.occ1, ss.occ2)
 
         return match[is_foreground], -dists[is_foreground]
 
-def evaluate_filter(model_file, n=100, ib=False, ml=False):
+def evaluate_filter(model_file, n=100, ib=False, fl=False):
     np.random.seed(0)
 
     filter_dm = FilterDataManager(evaluation=False)
@@ -50,11 +50,11 @@ def evaluate_filter(model_file, n=100, ib=False, ml=False):
 
         return filter_res[is_valid], scores[is_valid]
 
-    if ml:
+    if fl:
         print 'Loading metric learning', model_file
-        ml = MetricLearning()
-        ml.restore(model_file)
-        prob = ml.eval_filter_prob(ss.occ)
+        fl = FeatureLearning()
+        fl.restore(model_file)
+        prob = fl.eval_filter_prob(ss.occ)
         prob = prob[:, :, :, 1]
 
         return filter_res[is_valid], prob[is_valid]

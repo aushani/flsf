@@ -10,9 +10,9 @@ namespace ev = library::evaluation;
 namespace app {
 namespace evaluation {
 
-App::App(const fs::path &tsf_dir, const std::string &date, int log_num) :
+App::App(const fs::path &tsf_dir, const std::string &date, const fs::path &network_dir, int log_num) :
  camera_cal_(tsf_dir / "kittidata" / date),
- flow_processor_("/home/aushani/koopa_training/") {
+ flow_processor_(network_dir) {
   // Load data
   LoadVelodyneData(tsf_dir, date, log_num);
   LoadTrackletData(tsf_dir, date, log_num);
