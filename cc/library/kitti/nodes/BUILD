@@ -5,6 +5,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
             "//library/kitti",
+            "//library/flow",
             "//library/osg_nodes",
            ]
 )

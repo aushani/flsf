@@ -61,7 +61,7 @@ class Icra2017Background:
         pos_filter_loss = tf.where(is_foreground, pos_loss, tf.zeros_like(pos_loss))
         weighted_filter_loss = neg_filter_loss + pos_filter_loss
 
-        cost = tf.reduce_mean(weighted_filter_loss)
+        cost = tf.reduce_sum(weighted_filter_loss)
         self.loss = cost
 
         self.opt = tf.train.FtrlOptimizer(0.01)
@@ -114,8 +114,8 @@ class Icra2017Background:
 
         iteration = start_iter + 1
 
-        it_save = 10000
-        it_plot = 10000
+        it_save = 1000
+        it_plot = 1000
         it_summ = 100
 
         t_sum = 0

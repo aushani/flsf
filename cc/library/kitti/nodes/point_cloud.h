@@ -6,6 +6,9 @@
 #include <osg/MatrixTransform>
 
 #include "library/kitti/velodyne_scan.h"
+#include "library/flow/distance_map.h"
+
+namespace fl = library::flow;
 
 namespace library {
 namespace kitti {
@@ -17,6 +20,7 @@ class PointCloud : public osg::Geometry {
   PointCloud(const VelodyneScan &scan);
 
   void Update(const VelodyneScan &scan);
+  void Update(const VelodyneScan &scan, const fl::DistanceMap &dm, float x, float y);
 
   void Render(bool render);
 

@@ -187,11 +187,12 @@ void NodeManager::Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &sc
   UpdateViewer();
 }
 
-void NodeManager::ShowDistanceMap(const fl::FlowProcessor &fp, double x, double y) {
+void NodeManager::ShowDistanceMap(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan2, double x, double y) {
   const auto &dm = fp.GetDistanceMap();
 
   viewer_->Lock();
   dmn_->Update(dm, x, y);
+  //pc2_->Update(scan2, dm, x, y);
   viewer_->Unlock();
 
   dmn_->Render(true);

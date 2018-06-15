@@ -76,7 +76,7 @@ void DistanceMap::Update(const fl::DistanceMap &dm, float x, float y) {
   osg::ref_ptr<osg::LineWidth> lw = new osg::LineWidth(8.0);
   ss->setAttributeAndModes(pm, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
   ss->setAttributeAndModes(lw, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-  csg->addChild(shape);
+  //csg->addChild(shape);
 
   // Remove old children
   while (getNumChildren() > 0) {
@@ -115,9 +115,9 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
       if (val < 0) val = 0;
 
       double r = val;
-      double g = 0;
-      double b = 1-r;
-      double a = 0.5;
+      double g = 1-r;
+      double b = 0;
+      double a = 0.8;
 
       if (dist < 0) {
         r = 0.2;
@@ -156,7 +156,7 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
   double b = 1-r;
 
   osg::Vec4 color(r, g, b, 0.5);
-  im->setColor(color, best_i, best_j, 0);
+  //im->setColor(color, best_i, best_j, 0);
 
   return im;
 }

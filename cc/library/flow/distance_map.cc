@@ -61,6 +61,16 @@ bool DistanceMap::InRange(int i, int j, int di, int dj) const {
   return valid_x && valid_y && valid_di && valid_dj;
 }
 
+bool DistanceMap::InRangeXY(float x, float y, float dx, float dy) const {
+  int i = std::round(x / resolution_);
+  int j = std::round(y / resolution_);
+
+  int di = std::round(dx / resolution_);
+  int dj = std::round(dy / resolution_);
+
+  return InRange(i, j, di, dj);
+}
+
 void DistanceMap::SetDistance(int i, int j, int di, int dj, float dist) {
   BOOST_ASSERT(InRange(i, j, di, dj));
 

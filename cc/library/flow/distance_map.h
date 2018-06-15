@@ -22,6 +22,7 @@ class DistanceMap {
   int MinOffset() const;
   int MaxOffset() const;
   bool InRange(int i, int j, int di, int dj) const;
+  bool InRangeXY(float x, float y, float dx, float dy) const;
 
   float GetResolution() const;
 

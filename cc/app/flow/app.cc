@@ -198,7 +198,8 @@ void App::HandleClick(const Command &command) {
     printf("In range\n");
   }
 
-  node_manager_.ShowDistanceMap(flow_processor_, x, y);
+  const auto &scan2 = scans_[scan_at_];
+  node_manager_.ShowDistanceMap(flow_processor_, scan2, x, y);
 
   // Get filter result
   float prob = fm.GetFilterProbabilityXY(x, y);

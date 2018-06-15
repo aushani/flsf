@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
-path = '/home/aushani/data/eval_tsf++'
+path = '/home/aushani/data/eval_tsf++/model.ckpt-2616000'
 dirnames = [
     #'%s/2011_09_26_drive_0001_sync' % (path),
     #'%s/2011_09_26_drive_0002_sync' % (path),

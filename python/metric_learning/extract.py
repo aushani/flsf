@@ -17,20 +17,14 @@ out_dir = sys.argv[2]
 tmp_str = model_file[::-1]
 idx = tmp_str.find('/')
 
-if idx == -1:
-    model_dir = './'
-else:
-    model_dir = tmp_str[:idx:-1]
-
-print model_file
-print model_dir
+print 'Loading ', model_file
 
 chkp.print_tensors_in_checkpoint_file(model_file, tensor_name='', all_tensors=False, all_tensor_names=True)
 
 sess = tf.Session()
 
 saver = tf.train.import_meta_graph(model_file + '.meta')
-saver.restore(sess, tf.train.latest_checkpoint(model_dir))
+saver.restore(sess, model_file)
 
 graph = tf.get_default_graph()
 

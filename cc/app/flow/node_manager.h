@@ -35,7 +35,7 @@ class NodeManager {
   void SetViewer(const std::shared_ptr<vw::Viewer> &viewer);
 
   void Update(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan1, const kt::VelodyneScan &scan2, kt::Tracklets *tracklets, int frame_num);
-  void ShowDistanceMap(const fl::FlowProcessor &fp, double x, double y);
+  void ShowDistanceMap(const fl::FlowProcessor &fp, const kt::VelodyneScan &scan2, double x, double y);
   void ClearDistanceMap();
 
   void SetViewMode(int view_mode);
