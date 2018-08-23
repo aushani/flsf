@@ -7,6 +7,7 @@ cc_library(
             "//library/flow",
             "//library/kitti",
             "//library/osg_nodes",
+            "//library/viewer/util",
             "@openscenegraph//:openscenegraph"
            ],
 )

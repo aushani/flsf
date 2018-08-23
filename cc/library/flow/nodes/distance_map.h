@@ -24,7 +24,7 @@ class DistanceMap : public osg::Group {
   void Render(bool render);
 
  private:
-  static constexpr double kDistScaleFactor_ = 0.5;
+  static constexpr double kDistScaleFactor_ = 5.0;
   osg::ref_ptr<osg::Image> GetImage(const fl::DistanceMap &cm, int i0, int j0);
   void SetUpTexture(osg::Texture2D *texture, osg::Geode *geode, double x0, double y0, int width, int height, int bin_num) const;
 };

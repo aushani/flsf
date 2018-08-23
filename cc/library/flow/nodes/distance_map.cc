@@ -7,6 +7,7 @@
 
 #include "library/osg_nodes/composite_shape_group.h"
 #include "library/kitti/object_class.h"
+#include "library/viewer/util/colormap.h"
 
 namespace osgn = library::osg_nodes;
 namespace kt = library::kitti;
@@ -114,20 +115,8 @@ osg::ref_ptr<osg::Image> DistanceMap::GetImage(const fl::DistanceMap &dm, int i0
       if (val > 1) val = 1;
       if (val < 0) val = 0;
 
-      double r = val;
-      double g = 1-r;
-      double b = 0;
-      double a = 0.8;
+      osg::Vec4 color = library::viewer::util::Jet::at(val * 255);
 
-      if (dist < 0) {
-        r = 0.2;
-        g = 0.2;
-        b = 0.2;
-        a = 0.2;
-      }
-
-
-      osg::Vec4 color(r, g, b, a);
       im->setColor(color, i, j, 0);
 
       if (dist >= 0) {
